@@ -1,9 +1,11 @@
-package org.nimang.mpjtool;
+package org.nimang.mpjtool.util;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
+import com.github.yulichang.wrapper.MPJAbstractLambdaWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.nimang.mpjtool.annotation.*;
 import org.nimang.mpjtool.enums.LogicKey;
@@ -110,55 +112,54 @@ public class MPJUtil {
                 continue;
             }
             // 忽略添加 @MPIgnore 注解的字段
-            MPIgnore MPIgnore = cField.getAnnotation(MPIgnore.class);
-            if(MPIgnore != null){
+            MPIgnore mpIgnore = cField.getAnnotation(MPIgnore.class);
+            if(mpIgnore != null){
                 continue;
             }
-            MPOrder order = null;
-            MPEnums enums = null;
+            MPOrder mpOrder = null;
+            MPEnums mpEnums = null;
             Class<?> source = mainClass;
-            String index = "";
+            String alias = "";
             String field = cField.getName();
-            MPSelect MPSelect = cField.getAnnotation(MPSelect.class);
-            if(MPSelect != null){
-                if(!Void.class.equals(MPSelect.source())){
-                    source = MPSelect.source();
+            MPSelect mpSelect = cField.getAnnotation(MPSelect.class);
+            if(mpSelect != null){
+                if(!Void.class.equals(mpSelect.targetClass())){
+                    source = mpSelect.targetClass();
                 }
-                if(StrUtil.isNotBlank(MPSelect.field())){
-                    field = MPSelect.field();
+                if(StrUtil.isNotBlank(mpSelect.field())){
+                    field = mpSelect.field();
                 }
-                if(!OrderKey.NONE.equals(MPSelect.orderBy().order())){
-                    order = new MPOrder();
-                    order.setPriority(MPSelect.orderBy().priority());
-                    order.setIsAsc(OrderKey.ASC.equals(MPSelect.orderBy().order()));
-                    resultList.add(order);
+                if(!OrderKey.NONE.equals(mpSelect.orderBy().order())){
+                    mpOrder = new MPOrder();
+                    mpOrder.setPriority(mpSelect.orderBy().priority());
+                    mpOrder.setIsAsc(OrderKey.ASC.equals(mpSelect.orderBy().order()));
+                    resultList.add(mpOrder);
                 }
-                enums = MPSelect.enums();
-                index = MPSelect.index();
+                mpEnums = mpSelect.enums();
+                alias = mpSelect.alias();
             } else if (NEED_ANNOTATION){
                 continue;
             }
-            checkField(source, field, "SELECT", result.getName());
-            MPSFunction<?> sourceMask = getMask(source, field);
-            MPSFunction<?> resultMask = getMask(result, cField.getName());
-            if(order != null){
-                order.setMask(sourceMask);
+            MPSFunction<?> sourceMask = getMask(source, field, "SELECT", result.getName());
+            MPSFunction<?> resultMask = getMask(result, cField.getName(), "SELECT", result.getName());
+            if(mpOrder != null){
+                mpOrder.setMask(sourceMask);
             }
 
-            if(enums != null && !Enum.class.equals(enums.enumClass())){
+            if(mpEnums != null && !Enum.class.equals(mpEnums.enumClass())){
                 // 枚举转换
                 try {
-                    String target = StrUtil.isBlank(index) ? "" : index + ".`" + field + "`";
-                    StringBuilder caseInfo = getCaseInfo(target, enums.enumClass(), enums.val(), enums.msg());
+                    String target = StrUtil.isBlank(alias) ? "" : alias + ".`" + field + "`";
+                    StringBuilder caseInfo = getCaseInfo(target, mpEnums.enumClass(), mpEnums.val(), mpEnums.msg());
                     wrapper.selectFunc(caseInfo::toString, sourceMask, resultMask);
                 } catch (Exception e) {
                     throw new RuntimeException(result.getName() + " -> " + "SELECT：枚举转换错误[" + cField.getName()+ "]");
                 }
             }else {
-                if(StrUtil.isBlank(index)){
+                if(StrUtil.isBlank(alias)){
                     wrapper.selectAs(sourceMask, resultMask);
                 }else {
-                    wrapper.selectAs(index, sourceMask, resultMask);
+                    wrapper.selectAs(alias, sourceMask, resultMask);
                 }
             }
         }
@@ -183,13 +184,13 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> buildJoin(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result) {
-        MPJoin MPJoin = result.getAnnotation(MPJoin.class);
-        MPJoins MPJoins = result.getAnnotation(MPJoins.class);
-        if(MPJoin != null){
-            processJoin(wrapper, mainClass, MPJoin, result);
-        }else if (MPJoins != null){
-            if(ObjectUtil.isNotEmpty(MPJoins.joins())){
-                for (MPJoin subMPJoin : MPJoins.joins()){
+        MPJoin mpJoin = result.getAnnotation(MPJoin.class);
+        MPJoins mpJoins = result.getAnnotation(MPJoins.class);
+        if(mpJoin != null){
+            processJoin(wrapper, mainClass, mpJoin, result);
+        }else if (mpJoins != null){
+            if(ObjectUtil.isNotEmpty(mpJoins.joins())){
+                for (MPJoin subMPJoin : mpJoins.joins()){
                     processJoin(wrapper, mainClass, subMPJoin, result);
                 }
             }
@@ -201,33 +202,68 @@ public class MPJUtil {
      * join组装工序
      * @param wrapper MPJLambdaWrapper<T>
      * @param mainClass 主体类
-     * @param MPJoin 返回参数类
+     * @param mpJoin 返回参数类
      * @param <T>
      * @param <X>
      */
-    private static <T,X> void processJoin(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, MPJoin MPJoin, Class<?> result){
-        Class<?> joinSource = mainClass;
-        Class<?> linkSource = mainClass;
+    private static <T,X> void processJoin(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, MPJoin mpJoin, Class<?> result){
+        MPOn[] mpOns = mpJoin.ons();
+        if(ObjectUtil.isEmpty(mpOns)){
+            throw new RuntimeException(result.getName() + " -> " + "JOIN：缺少ON条件语句");
+        }
+        Class<X> leftClass = (Class<X>)(Void.class.equals(mpJoin.leftClass()) ? mainClass : mpJoin.leftClass());
+        List<MPCondition> funConditions = new ArrayList<>();
+        List<MPCondition> valConditions = new ArrayList<>();
+        for (MPOn mpOn : mpOns) {
+            MPSFunction<X> leftMask = getMask(leftClass, mpOn.leftField(), "JOIN", result.getName());
 
-        if(!Void.class.equals(MPJoin.joinSource())){
-            joinSource = MPJoin.joinSource();
-        }
-        if(!Void.class.equals(MPJoin.rightSource())){
-            linkSource = MPJoin.rightSource();
-        }
-        String rightAlias = StrUtil.isBlank(MPJoin.rightAlias()) ? null : MPJoin.rightAlias();
-        Class<X> xJoinSource = (Class<X>) joinSource;
-        checkField(xJoinSource, MPJoin.joinField(), "JOIN", result.getName());
-        MPSFunction<X> joinSourceMask = getMask(xJoinSource, MPJoin.joinField());
-        checkField(linkSource, MPJoin.rightField(), "JOIN", result.getName());
-        MPSFunction<?> linkSourceMask = getMask(linkSource, MPJoin.rightField());
+            MPCondition condition = new MPCondition();
+            condition.setAlias(mpJoin.leftAlias());
+            condition.setMask(leftMask);
+            condition.setRule(mpOn.rule());
 
-        switch (MPJoin.rule()) {
-            case LEFT_JOIN : wrapper.leftJoin(xJoinSource, MPJoin.alias(), joinSourceMask, rightAlias, linkSourceMask);break;
-            case RIGHT_JOIN : wrapper.rightJoin(xJoinSource, MPJoin.alias(), joinSourceMask, rightAlias, linkSourceMask);break;
-            case INNER_JOIN : wrapper.innerJoin(xJoinSource, MPJoin.alias(), joinSourceMask, linkSourceMask);break;
-            default : throw new RuntimeException(result.getName() + " -> " + "JOIN：不支持的类型[" + MPJoin.rule() + "]");
+            if(RuleKey.IS_NULL.equals(mpOn.rule()) || RuleKey.IS_NOT_NULL.equals(mpOn.rule())){
+                valConditions.add(condition);
+            }else if(RuleKey.IN.equals(condition.getRule()) || RuleKey.NOT_IN.equals(condition.getRule())){
+                condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), Arrays.asList(mpOn.val())));
+                valConditions.add(condition);
+            }else if(RuleKey.BETWEEN.equals(condition.getRule()) || RuleKey.NOT_BETWEEN.equals(condition.getRule())){
+                MPCondition aftCondition = BeanUtil.copyProperties(condition, MPCondition.class);
+                aftCondition.setPriority(PriorityKey.AFTER);
+                aftCondition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[1]));
+                condition.setPriority(PriorityKey.BEFORE);
+                condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
+                condition.setPartner(aftCondition);
+                valConditions.add(condition);
+            }else if(ObjectUtil.isEmpty(mpOn.val())){
+                Class<?> rightClass = Void.class.equals(mpOn.rightClass()) ? mainClass : mpOn.rightClass();
+                MPSFunction<?> rightMask = getMask(rightClass, mpOn.rightField(), "JOIN", result.getName());
+                condition.setRightMask(rightMask);
+                condition.setRightAlias(StrUtil.isBlank(mpOn.rightAlias()) ? null : mpOn.rightAlias());
+                funConditions.add(condition);
+            }else {
+                condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
+                valConditions.add(condition);
+            }
         }
+
+        String keyWord;
+        switch (mpJoin.join()) {
+            case LEFT_JOIN : keyWord = "LEFT JOIN";break;
+            case RIGHT_JOIN : keyWord = "RIGHT JOIN";break;
+            case INNER_JOIN : keyWord = "INNER JOIN";break;
+            default : throw new RuntimeException(result.getName() + " -> " + "JOIN：不支持的类型[" + mpJoin.join() + "]");
+        }
+
+        wrapper.join(keyWord, leftClass, mpJoin.leftAlias(), on -> {
+            funConditions.forEach(condition -> {
+                funCondition(on, condition);
+            });
+            valConditions.forEach(condition -> {
+                valCondition(on, condition);
+            });
+            return on;
+        });
     }
 
     /***********************************  JOIN END  ***********************************/
@@ -257,30 +293,29 @@ public class MPJUtil {
                 continue;
             }
             // 忽略添加 @MPIgnore 注解的字段
-            MPIgnore MPIgnore = cField.getAnnotation(MPIgnore.class);
-            if(MPIgnore != null){
+            MPIgnore mpIgnore = cField.getAnnotation(MPIgnore.class);
+            if(mpIgnore != null){
                 continue;
             }
-            MPWheres MPWheres = cField.getAnnotation(MPWheres.class);
-            MPWhere MPWhere = cField.getAnnotation(MPWhere.class);
+            MPWheres mpWheres = cField.getAnnotation(MPWheres.class);
+            MPWhere mpWhere = cField.getAnnotation(MPWhere.class);
             MPCondition condition;
-            if(MPWheres != null){
+            if(mpWheres != null){
                 condition = new MPCondition();
                 List<MPCondition> subCondition = new ArrayList<>();
-                MPWhere[] mpWheres = MPWheres.wheres();
-                for (MPWhere subMPWhere : mpWheres){
-                    subCondition.add(makeCondition(mainClass, subMPWhere, cField, val, betweenConditions));
+                for (MPWhere subMPWhere : mpWheres.wheres()){
+                    subCondition.add(makeCondition(mainClass, subMPWhere, cField, val, queryName, betweenConditions));
                 }
                 condition.setConditions(subCondition);
-                condition.setLogic(MPWheres.logic());
-                processWhereLogic(wrapper, condition, queryName);
-            }else if(MPWhere != null){
-                condition = makeCondition(mainClass, MPWhere, cField, val, betweenConditions);
-                processWhere(wrapper, condition, queryName);
+                condition.setLogic(mpWheres.logic());
+                processWhereLogic(wrapper, condition);
+            }else if(mpWhere != null){
+                condition = makeCondition(mainClass, mpWhere, cField, val, queryName, betweenConditions);
+                valCondition(wrapper, condition);
             }else {
                 if(!NEED_ANNOTATION){
-                    condition = makeCondition(mainClass, null, cField, val, betweenConditions);
-                    processWhere(wrapper, condition, queryName);
+                    condition = makeCondition(mainClass, null, cField, val, queryName, betweenConditions);
+                    valCondition(wrapper, condition);
                 }
             }
         }
@@ -290,46 +325,43 @@ public class MPJUtil {
     /**
      * 生产条件对象
      * @param mainClass 主体类
-     * @param MPWhere 查询注解
+     * @param mpWhere 查询注解
      * @param cField 当前字段
      * @param val 字段值
      * @param betweenConditions Between条件
      * @return MPCondition
      * @param <T>
      */
-    private static <T> MPCondition makeCondition(Class<T> mainClass, MPWhere MPWhere, Field cField, Object val, Map<String, MPCondition> betweenConditions){
+    private static <T> MPCondition makeCondition(Class<T> mainClass, MPWhere mpWhere, Field cField, Object val, String queryName, Map<String, MPCondition> betweenConditions){
 
-        String index = null;
+        String alias = null;
         String field = cField.getName();
-        Class<?> source = mainClass;
+        Class<?> targetClass = mainClass;
         RuleKey rule = RuleKey.EQ;
         PriorityKey priority = PriorityKey.BEFORE;
 
-        if(MPWhere != null){
-            if(StrUtil.isNotBlank(MPWhere.index())){
-                index = MPWhere.index();
+        if(mpWhere != null){
+            if(StrUtil.isNotBlank(mpWhere.alias())){
+                alias = mpWhere.alias();
             }
-            if(!Void.class.equals(MPWhere.source())){
-                source = MPWhere.source();
+            if(!Void.class.equals(mpWhere.targetClass())){
+                targetClass = mpWhere.targetClass();
             }
-            if(StrUtil.isNotBlank(MPWhere.field())){
-                field = MPWhere.field();
+            if(StrUtil.isNotBlank(mpWhere.field())){
+                field = mpWhere.field();
             }
-            rule = MPWhere.rule();
-            priority = MPWhere.priority();
+            rule = mpWhere.rule();
+            priority = mpWhere.priority();
         }
         MPCondition condition = new MPCondition();
-        condition.setIndex(index);
-        condition.setSource(source);
-        condition.setField(field);
+        condition.setAlias(alias);
+        condition.setMask(getMask(targetClass, field, "WHERE", queryName));
         condition.setRule(rule);
         condition.setVal(val);
         if(RuleKey.BETWEEN.equals(condition.getRule()) || RuleKey.NOT_BETWEEN.equals(condition.getRule())){
             condition.setPriority(priority);
             MPCondition btCondition = betweenConditions.get(field);
-            if(btCondition != null){
-                condition.setPartner(btCondition);
-            }
+            Optional.ofNullable(btCondition).ifPresent(condition::setPartner);
             betweenConditions.put(field, condition);
         }
         return condition;
@@ -341,57 +373,59 @@ public class MPJUtil {
      * @param logicCondition 逻辑条件对象
      * @param <T>
      */
-    private static <T> void processWhereLogic(MPJLambdaWrapper<T> wrapper, MPCondition logicCondition, String queryName) {
+    private static <T> void processWhereLogic(MPJLambdaWrapper<T> wrapper, MPCondition logicCondition) {
         List<MPCondition> conditions = logicCondition.getConditions();
         if(LogicKey.AND.equals(logicCondition.getLogic())){
             wrapper.and(true, tMPJLambdaWrapper -> {
                 for(MPCondition condition : conditions){
-                    processWhere(tMPJLambdaWrapper, condition, queryName);
+                    valCondition(tMPJLambdaWrapper, condition);
                 }
             });
         }else if(LogicKey.OR.equals(logicCondition.getLogic())){
             wrapper.and(true, tMPJLambdaWrapper -> {
                 for(MPCondition condition : conditions){
-                    tMPJLambdaWrapper.or(tMPJLambdaWrapper1 -> processWhere(tMPJLambdaWrapper1, condition, queryName));
+                    tMPJLambdaWrapper.or(tMPJLambdaWrapper1 -> valCondition(tMPJLambdaWrapper1, condition));
                 }
             });
         }
     }
 
+
+    /***********************************  WHERE END  ***********************************/
+
+    /***********************************  Condition START  ***********************************/
     /**
-     * 普通工序
-     * @param wrapper MPJLambdaWrapper
-     * @param condition 普通条件对象
-     * @param <T>
+     * 条件拼接-具体值
+     * @param wrapper MPJLambdaWrapper<T>
+     * @param condition MPCondition
      */
-    private static <T> void processWhere(MPJLambdaWrapper<T> wrapper, MPCondition condition, String queryName) {
-        checkField(condition.getSource(), condition.getField(), "WHERE", queryName);
-        String index = condition.getIndex();
-        MPSFunction<?> mask = getMask(condition.getSource(), condition.getField());
+    private static <T> void valCondition(MPJAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
+        String alias = StrUtil.isBlank(condition.getAlias()) ? null : condition.getAlias();
+        MPSFunction<?> mask = condition.getMask();
         Object val = condition.getVal();
         switch (condition.getRule()) {
-            case EQ : wrapper.eq(index, mask, val);break;
-            case NE : wrapper.ne(index, mask, val);break;
-            case GT : wrapper.gt(index, mask, val);break;
-            case GE : wrapper.ge(index, mask, val);break;
-            case LT : wrapper.lt(index, mask, val);break;
-            case LE : wrapper.le(index, mask, val);break;
-            case LIKE : wrapper.like(index, mask, val);break;
-            case NOT_LIKE : wrapper.notLike(index, mask, val);break;
-            case LIKE_LEFT : wrapper.likeLeft(index, mask, val);break;
-            case LIKE_RIGHT : wrapper.likeRight(index, mask, val);break;
+            case EQ : wrapper.eq(alias, mask, val);break;
+            case NE : wrapper.ne(alias, mask, val);break;
+            case GT : wrapper.gt(alias, mask, val);break;
+            case GE : wrapper.ge(alias, mask, val);break;
+            case LT : wrapper.lt(alias, mask, val);break;
+            case LE : wrapper.le(alias, mask, val);break;
+            case LIKE : wrapper.like(alias, mask, val);break;
+            case NOT_LIKE : wrapper.notLike(alias, mask, val);break;
+            case LIKE_LEFT : wrapper.likeLeft(alias, mask, val);break;
+            case LIKE_RIGHT : wrapper.likeRight(alias, mask, val);break;
             case IN :
                 if(val instanceof Collection){
-                    wrapper.in(index, mask, (Collection<?>)val);
+                    wrapper.in(alias, mask, (Collection<?>)val);
                 }else {
-                    wrapper.in(index, mask, val);
+                    wrapper.in(alias, mask, val);
                 }
                 break;
             case NOT_IN :
                 if(val instanceof Collection){
-                    wrapper.notIn(index, mask, (Collection<?>)val);
+                    wrapper.notIn(alias, mask, (Collection<?>)val);
                 }else {
-                    wrapper.notIn(index, mask, val);
+                    wrapper.notIn(alias, mask, val);
                 }
                 break;
             case IS_NULL : wrapper.isNull(mask);break;
@@ -399,27 +433,55 @@ public class MPJUtil {
             case BETWEEN:
                 if(condition.getPartner() != null){
                     if(PriorityKey.BEFORE.equals(condition.getPriority())){
-                        wrapper.between(index, mask, val, condition.getPartner().getVal());
+                        wrapper.between(alias, mask, val, condition.getPartner().getVal());
                     }else {
-                        wrapper.between(index, mask, condition.getPartner().getVal(), val);
+                        wrapper.between(alias, mask, condition.getPartner().getVal(), val);
                     }
                 }
                 break;
             case NOT_BETWEEN:
                 if(condition.getPartner() != null) {
                     if(PriorityKey.BEFORE.equals(condition.getPriority())){
-                        wrapper.notBetween(index, mask, val, condition.getPartner().getVal());
+                        wrapper.notBetween(alias, mask, val, condition.getPartner().getVal());
                     }else {
-                        wrapper.notBetween(index, mask, condition.getPartner().getVal(), val);
+                        wrapper.notBetween(alias, mask, condition.getPartner().getVal(), val);
                     }
                 }
                 break;
-            default : throw new RuntimeException(queryName + " -> " + "WHERE：不支持的类型[" + condition.getRule() + "]");
         }
     }
 
-    /***********************************  WHERE END  ***********************************/
+    /**
+     * 条件拼接-表字段信息
+     * @param wrapper MPJLambdaWrapper<T>
+     * @param condition MPCondition
+     */
+    private static <T> void funCondition(MPJAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
+        String alias = StrUtil.isBlank(condition.getAlias()) ? null : condition.getAlias();
+        MPSFunction<?> mask = condition.getMask();
+        String rightAlias = StrUtil.isBlank(condition.getRightAlias()) ? null : condition.getRightAlias();
+        MPSFunction<?> rightMask = condition.getRightMask();
+        switch (condition.getRule()) {
+            case EQ : wrapper.eq(alias, mask, rightAlias, rightMask);break;
+            case NE : wrapper.ne(alias, mask, rightAlias, rightMask);break;
+            case GT : wrapper.gt(alias, mask, rightAlias, rightMask);break;
+            case GE : wrapper.ge(alias, mask, rightAlias, rightMask);break;
+            case LT : wrapper.lt(alias, mask, rightAlias, rightMask);break;
+            case LE : wrapper.le(alias, mask, rightAlias, rightMask);break;
+            case IN : wrapper.in(alias, mask, rightAlias, rightMask);break;
+            case NOT_IN : wrapper.notIn(alias, mask, rightAlias, rightMask);break;
+            case IS_NULL : wrapper.isNull(mask);break;
+            case IS_NOT_NULL : wrapper.isNotNull(mask);break;
+        }
+    }
 
+    /***********************************  Condition END  ***********************************/
+
+
+    private static <T> MPSFunction<T> getMask(Class<T> clazz, String filedName, String point, String configClassName){
+        checkField(clazz, filedName, point, configClassName);
+        return getMask(clazz, filedName);
+    }
 
     /**
      * 将类、字段名转换为函数式（如：Student::getName）
@@ -429,7 +491,7 @@ public class MPJUtil {
      * @param <T>
      */
     private static <T> MPSFunction<T> getMask(Class<T> clazz, String filedName){
-        return makeMPSFun(makeFun(clazz), filedName);
+        return new MPSFunction<>(filedName, clazz.getName());
     }
 
     private static <T> Function<String, MPSFunction<T>> makeFun(Class<T> clazz){
@@ -482,4 +544,6 @@ public class MPJUtil {
         caseInfo.append(" ELSE '' END");
         return caseInfo;
     }
+
+
 }

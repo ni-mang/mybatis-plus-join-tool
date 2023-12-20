@@ -3,7 +3,7 @@ package org.nimang.mpjtool.annotation;
 import java.lang.annotation.*;
 
 /**
- * 联表规则组
+ * 连接规则组
  * @author JustHuman
  */
 @Documented

@@ -17,17 +17,17 @@ import java.lang.annotation.*;
 public @interface MPWhere {
 
     /**
-     * 关联表索引
-     * 关联表的别名，默认情况下，主表为“t”，关联表分别按“t1,t2,t3...”顺序命名
-     * @return
+     * 表别名
+     * <br>不指定则按默认别名，主表为“t”，连接表分别按“t1,t2,t3...”顺序命名</br>
+     * @return String
      */
-    String index() default "";
+    String alias() default "";
 
     /**
-     * 源类，指向当前字段作用的对象类型
+     * 目标类，默认主类
      * @return Class<?>
      */
-    Class<?> source() default Void.class;
+    Class<?> targetClass() default Void.class;
 
     /**
      * 字段名，不填默认为当前字段名
@@ -42,7 +42,8 @@ public @interface MPWhere {
     RuleKey rule() default RuleKey.EQ;
 
     /**
-     * rule 为 BETWEEN 或 NOT_BETWEEN 时，需指定优先级，默认为 BEFORE
+     * 优先级
+     * <br>rule 为 BETWEEN 或 NOT_BETWEEN 时，需指定优先级，默认为 BEFORE</br>
      * @return PriorityKey
      */
     PriorityKey priority() default PriorityKey.BEFORE;

@@ -13,17 +13,17 @@ import java.lang.annotation.*;
 public @interface MPSelect {
 
     /**
-     * 关联表索引
-     * 关联表的别名，默认情况下，主表为“t”，关联表分别按“t1,t2,t3...”顺序命名
-     * @return
+     * 表别名
+     * <br>不指定则按默认别名，主表为“t”，连接表分别按“t1,t2,t3...”顺序命名</br>
+     * @return String
      */
-    String index() default "";
+    String alias() default "";
 
     /**
-     * 源类，默认主类
+     * 目标类，默认主类
      * @return Class<?>
      */
-    Class<?> source() default Void.class;
+    Class<?> targetClass() default Void.class;
 
     /**
      * 字段名，默认同当前字段

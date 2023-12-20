@@ -6,7 +6,7 @@ import org.nimang.mpjtool.enums.JoinKey;
 import java.lang.annotation.*;
 
 /**
- * 联表规则
+ * 连接规则
  * @author JustHuman
  */
 @Documented
@@ -15,44 +15,27 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MPJoin {
     /**
-     * join类，默认主表
+     * 左表类，默认主表
      * @return Class<?>
      */
-    Class<?> joinSource() default Void.class;
+    Class<?> leftClass() default Void.class;
 
     /**
-     * join类别名
+     * 左表类别名
      * @return String
      */
-    String alias() default "";
-
-    /**
-     * join字段名
-     * @return String
-     */
-    String joinField();
-
-    /**
-     * right类，默认主表
-     * @return Class<?>
-     */
-    Class<?> rightSource() default Void.class;
-
-    /**
-     * right类别名
-     * @return String
-     */
-    String rightAlias() default "";
-
-    /**
-     * right字段名
-     * @return String
-     */
-    String rightField();
+    String leftAlias() default "";
 
     /**
      * 规则，默认为 LEFT_JOIN
      * @return JoinKey
      */
-    JoinKey rule() default JoinKey.LEFT_JOIN;
+    JoinKey join() default JoinKey.LEFT_JOIN;
+
+    /**
+     * on规则组
+     * @return MPOn[]
+     */
+    MPOn[] ons();
+
 }
