@@ -1,37 +1,28 @@
-# MPJTool
+# MPJTool（mybatis-plus-join-tool）
 
 #### 介绍
-基于mybatis-plus-join，通过对查询接口中的Query类（搜索条件）及Result类（返回数据）添加自定义注解，实现自动组装MPJLambdaWrapper对象
+基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.8.1），通过对查询接口中的 Query 类（搜索条件）及 Result 类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
-#### 软件架构
-软件架构说明
-
+- 根据 Query 类的注解，自动拼接 Where 条件，可自动对参数进行判空，支持一个参数对多个字段的查询
+- 根据 Result 类的注解，自动拼接 Select 字段、Join 语句、OrderBy 语句，所需皆所查
+- 简化 service 的查询接口，对于没有复杂需求的连表查询，可开放一个统一接口，应对不同查询需求
+- 支持分段组装，可单独组装 Select、Join、Where 的部分，方便自行扩展条件
+- 具体用法请参考样例项目：https://gitee.com/nimang/mpjtool-demo
+#### 前置依赖
+    MPJTool 1.1.0  --  mybatis-plus-join 1.4.8.1
 
 #### 安装教程
+由于目前没有上传到 Maven 公共仓库，因此需要自行打包
+1.  下载项目代码到本地
+2.  使用 Maven 工具执行 install 操作，将项目进行打包并加入本地 Maven 库
+3.  在需要用到 MPJTool 的项目里添加如下依赖：
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+        <dependency>
+            <groupId>org.nimang</groupId>
+            <artifactId>mybatis-plus-join-tool</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+4. 也可以直接复制源码到目标项目中
 
-#### 使用说明
-
-1.  xxxx
-2.  xxxx
-3.  xxxx
-
-#### 参与贡献
-
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
-
-
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+#### 推荐项目
+- [PUPA代码生成器](https://gitee.com/nimang/pupa)
