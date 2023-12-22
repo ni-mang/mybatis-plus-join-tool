@@ -48,14 +48,21 @@ public class MPJUtil {
         return build(wrapper, mainClass, query, result, true);
     }
 
-
+    /**
+     * 组装完整Wrapper，含 select、join、where、orderBy
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
+     * @param result 返回参数类
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
     public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result) {
         return build(mainClass, query, result, true);
     }
 
 
     /**
-     * 组装完整Wrapper，含 select、join、where，自定义是否组装orderBy排序
+     * 组装完整Wrapper，含 select、join、where，自行选择是否组装orderBy排序
      * @param wrapper MPJLambdaWrapper<T>
      * @param mainClass 主体类
      * @param query 搜索条件对象
@@ -71,6 +78,15 @@ public class MPJUtil {
         return wrapper;
     }
 
+    /**
+     * 组装完整Wrapper，含 select、join、where，自行选择是否组装orderBy排序
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
+     * @param result 返回参数类
+     * @param withOrder 是否进行排序
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
     public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result, Boolean withOrder) {
         MPJLambdaWrapper<T> wrapper = new MPJLambdaWrapper<>(mainClass);
         return build(wrapper, mainClass, query, result, withOrder);
@@ -80,7 +96,7 @@ public class MPJUtil {
     /***********************************  SELECT START  ***********************************/
 
     /**
-     * 组装返回参数，仅 select，不排序
+     * 组装返回参数，含 select，orderBy
      * @param wrapper MPJLambdaWrapper
      * @param mainClass 主体类
      * @param result 返回参数类
@@ -88,11 +104,11 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result) {
-        return buildSelect(wrapper, mainClass, result, false);
+        return buildSelect(wrapper, mainClass, result, true);
     }
 
     /**
-     * 组装返回参数，仅 select，，自定义是否组装orderBy排序
+     * 组装返回参数，仅 select，自行选择是否组装orderBy排序
      * @param wrapper MPJLambdaWrapper
      * @param mainClass 主体类
      * @param result 返回参数类
@@ -101,7 +117,7 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withOrder) {
-        Field[] cFields = result.getDeclaredFields();
+        List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
         List<MPOrder> resultList = new ArrayList<>();
         for (Field cField:cFields){
             // 忽略静态字段
@@ -222,24 +238,24 @@ public class MPJUtil {
             if(RuleKey.IS_NULL.equals(mpOn.rule()) || RuleKey.IS_NOT_NULL.equals(mpOn.rule())){
                 valConditions.add(condition);
             }else if(RuleKey.IN.equals(condition.getRule()) || RuleKey.NOT_IN.equals(condition.getRule())){
-                condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), Arrays.asList(mpOn.val())));
+                condition.setVal(BaseUtil.convert(leftClass, mpOn.leftField(), Arrays.asList(mpOn.val())));
                 valConditions.add(condition);
             }else if(RuleKey.BETWEEN.equals(condition.getRule()) || RuleKey.NOT_BETWEEN.equals(condition.getRule())){
                 MPCondition aftCondition = BeanUtil.copyProperties(condition, MPCondition.class);
                 aftCondition.setPriority(PriorityKey.AFTER);
-                aftCondition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[1]));
+                aftCondition.setVal(BaseUtil.convert(leftClass, mpOn.leftField(), mpOn.val()[1]));
                 condition.setPriority(PriorityKey.BEFORE);
-                condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
+                condition.setVal(BaseUtil.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
                 condition.setPartner(aftCondition);
                 valConditions.add(condition);
-            }else if(mpOn.val() != null){ // 支持空字符查询
+            }else if(ObjectUtil.isEmpty(mpOn.val())){
                 Class<?> rightClass = Void.class.equals(mpOn.rightClass()) ? mainClass : mpOn.rightClass();
                 MPSFunction<?> rightMask = getMask(rightClass, mpOn.rightField(), "JOIN", result.getName());
                 condition.setRightMask(rightMask);
                 condition.setRightAlias(StrUtil.isBlank(mpOn.rightAlias()) ? null : mpOn.rightAlias());
                 funConditions.add(condition);
             }else {
-                condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
+                condition.setVal(BaseUtil.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
                 valConditions.add(condition);
             }
         }
@@ -276,7 +292,7 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> buildWhere(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query) {
-        Field[] cFields = query.getClass().getDeclaredFields();
+        List<Field> cFields = BaseUtil.getAllDeclaredFields(query.getClass());
         Map<String, MPCondition> betweenConditions = new LinkedHashMap<>();
         String queryName = query.getClass().getName();
         for (Field cField:cFields){
