@@ -36,23 +36,7 @@ public class MPJUtil {
     private static final boolean NEED_ANNOTATION = false;
 
     /**
-     * 组装完整Wrapper，含 select、join、where
-     * @param mainClass 主体类
-     * @param query 搜索条件对象
-     * @param result 返回参数类
-     * @return MPJLambdaWrapper
-     * @param <T>
-     */
-    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result) {
-        MPJLambdaWrapper<T> wrapper = new MPJLambdaWrapper<>(mainClass);
-        buildSelect(wrapper, mainClass, result, true);
-        buildJoin(wrapper, mainClass, result);
-        buildWhere(wrapper, mainClass, query);
-        return wrapper;
-    }
-
-    /**
-     * 设置Wrapper，含 select、join、where
+     * 组装完整Wrapper，含 select、join、where、orderBy
      * @param wrapper MPJLambdaWrapper<T>
      * @param mainClass 主体类
      * @param query 搜索条件对象
@@ -61,26 +45,39 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result) {
-        buildSelect(wrapper, mainClass, result, true);
+        return build(wrapper, mainClass, query, result, true);
+    }
+
+
+    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result) {
+        return build(mainClass, query, result, true);
+    }
+
+
+    /**
+     * 组装完整Wrapper，含 select、join、where，自定义是否组装orderBy排序
+     * @param wrapper MPJLambdaWrapper<T>
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
+     * @param result 返回参数类
+     * @param withOrder 是否进行排序
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result, Boolean withOrder) {
+        buildSelect(wrapper, mainClass, result, withOrder);
         buildJoin(wrapper, mainClass, result);
         buildWhere(wrapper, mainClass, query);
         return wrapper;
     }
 
+    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result, Boolean withOrder) {
+        MPJLambdaWrapper<T> wrapper = new MPJLambdaWrapper<>(mainClass);
+        return build(wrapper, mainClass, query, result, withOrder);
+    }
+
 
     /***********************************  SELECT START  ***********************************/
-
-    /**
-     * 组装返回参数，仅 select，进行排序
-     * @param wrapper MPJLambdaWrapper
-     * @param mainClass 主体类
-     * @param result 返回参数类
-     * @return MPJLambdaWrapper
-     * @param <T>
-     */
-    public static <T> MPJLambdaWrapper<T> buildSelectOrderBy(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result) {
-        return buildSelect(wrapper, mainClass, result, true);
-    }
 
     /**
      * 组装返回参数，仅 select，不排序
@@ -95,7 +92,7 @@ public class MPJUtil {
     }
 
     /**
-     * 组装返回参数
+     * 组装返回参数，仅 select，，自定义是否组装orderBy排序
      * @param wrapper MPJLambdaWrapper
      * @param mainClass 主体类
      * @param result 返回参数类
@@ -103,7 +100,7 @@ public class MPJUtil {
      * @return MPJLambdaWrapper
      * @param <T>
      */
-    private static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withOrder) {
+    public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withOrder) {
         Field[] cFields = result.getDeclaredFields();
         List<MPOrder> resultList = new ArrayList<>();
         for (Field cField:cFields){
@@ -235,7 +232,7 @@ public class MPJUtil {
                 condition.setVal(ConvertUtils.convert(leftClass, mpOn.leftField(), mpOn.val()[0]));
                 condition.setPartner(aftCondition);
                 valConditions.add(condition);
-            }else if(ObjectUtil.isEmpty(mpOn.val())){
+            }else if(mpOn.val() != null){ // 支持空字符查询
                 Class<?> rightClass = Void.class.equals(mpOn.rightClass()) ? mainClass : mpOn.rightClass();
                 MPSFunction<?> rightMask = getMask(rightClass, mpOn.rightField(), "JOIN", result.getName());
                 condition.setRightMask(rightMask);
