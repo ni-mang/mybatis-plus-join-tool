@@ -8,9 +8,145 @@
 - 简化 service 的查询接口，对于没有复杂需求的连表查询，可开放一个统一接口，应对不同查询需求
 - 支持分段组装，可单独组装 Select、Join、Where 的部分，方便自行扩展条件
 - 具体用法请参考样例项目：https://gitee.com/nimang/mpjtool-demo
-### 前置依赖
-    MPJTool 1.1.0  --  mybatis-plus-join 1.4.8.1 及以上
-                   --  hutool-all 
+
+### 简单样例
+　　以 Staff 为主表，先左连接中间表 StaffPost，再右连接职位表 Post，使用 StaffQuery 携带的参数进行查询，并将结果数据封装为 StaffWithPostVO 返回；
+
+Query 查询参数类
+```java
+@Data
+public class StaffQuery implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    /** 编号 */
+    private String no;
+
+    /** 姓名 */
+    @MPWhere(rule = RuleKey.LIKE)
+    private String name;
+
+    /** 手机号 */
+    @MPWhere(rule = RuleKey.LIKE_RIGHT)
+    private String mobile;
+
+    /** 年龄 */
+    private Integer age;
+
+    /** 薪资下限 */
+    @MPWhere(field = "wages", rule = RuleKey.BETWEEN, priority = PriorityKey.BEFORE)
+    private BigDecimal wagesMin;
+
+    /** 薪资上限 */
+    @MPWhere(field = "wages", rule = RuleKey.BETWEEN, priority = PriorityKey.AFTER)
+    private BigDecimal wagesMax;
+
+    /** 是否在职 */
+    private Boolean onJob;
+
+    /** 加入时间起始 */
+    @MPWhere(field = "joinTime", rule = RuleKey.GE)
+    private LocalDateTime joinTimeBegin;
+
+    /** 加入时间截止 */
+    @MPWhere(field = "joinTime", rule = RuleKey.LE)
+    private LocalDateTime joinTimeEnd;
+
+}
+```
+Result 结果返回类
+```java
+@Data
+@MPJoins(joins = {
+        @MPJoin(leftClass = StaffPost.class, ons = {
+                @MPOn(leftField = "staffId", rightField = "id")
+        }),
+        @MPJoin(leftClass = Post.class, join = JoinKey.RIGHT_JOIN, ons = {
+                @MPOn(leftField = "id", rightClass = StaffPost.class, rightField = "postId"),
+                @MPOn(leftField = "type", val = "1", rule = RuleKey.NE)
+        })
+})
+public class StaffWithPostVO implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    /** ID */
+    private Integer id;
+
+    /** 编号 */
+    private String no;
+
+    /** 姓名 */
+    private String name;
+
+    /** 职位名称 */
+    @MPSelect(targetClass = Post.class, field = "name")
+    private String postName;
+
+    /** 职位ID */
+    @MPSelect(targetClass = Post.class, field = "id")
+    private Integer postId;
+
+    /** 职位类型 */
+    @MPSelect(targetClass = Post.class, field = "type",
+            orderBy = @MPOrderBy(order = OrderKey.ASC, priority = 1))
+    private Integer postType;
+
+    /** 职位类型描述 */
+    @MPSelect(targetClass = Post.class, field = "type",
+            enums = @MPEnums(enumClass = PostTypeEnums.class))
+    private String postTypeDesc;
+
+    /** 加入时间 */
+    @MPSelect(orderBy = @MPOrderBy(order = OrderKey.DESC, priority = 2))
+    private LocalDateTime joinTime;
+}
+```
+Service执行方法
+```java
+    public List<StaffWithPostVO> querySingle(StaffQuery query) {
+        MPJLambdaWrapper<Staff> wrapper = MPJUtil.build(Staff.class, query, StaffWithPostVO.class);
+        return baseMapper.selectJoinList(StaffWithPostVO.class, wrapper);
+    }
+```
+执行Sql
+```sql
+SELECT
+	t.`id` AS id,
+	t.`no` AS NO,
+	t.`name` AS NAME,
+	t2.`name` AS postName,
+	t2.`id` AS postId,
+	t2.`type` AS postType,
+	CASE
+		t2.`type` 
+		WHEN 1 THEN
+		'管理' 
+		WHEN 2 THEN
+		'技术' 
+		WHEN 3 THEN
+		'协办' 
+		WHEN 4 THEN
+		'普职' ELSE '' 
+	END AS postTypeDesc,
+	t.`join_time` AS joinTime 
+FROM
+	demo_staff t
+	LEFT JOIN demo_staff_post t1 ON ( t1.`staff_id` = t.`id` )
+	RIGHT JOIN demo_post t2 ON ( t2.`id` = t1.`post_id` AND t2.`type` <> 1 ) 
+WHERE
+	(
+		t.`no` = '100' 
+		AND t.`name` LIKE '%陈%' 
+		AND t.`mobile` LIKE '13%' 
+		AND t.`age` = 25 
+		AND t.`wages` BETWEEN '500' AND '10000' 
+		AND t.`on_job` = TRUE 
+		AND t.`join_time` >= '2023-11-01T00:00' 
+		AND t.`join_time` <= '2023-12-30T23:59:59' 
+	) 
+ORDER BY
+	t2.`type` ASC,
+	t.`join_time` DESC
+```
 
 ### 安装教程
 　　由于目前没有上传到 Maven 公共仓库，因此需要自行打包
@@ -22,15 +158,32 @@
         <dependency>
             <groupId>org.nimang</groupId>
             <artifactId>mybatis-plus-join-tool</artifactId>
-            <version>1.1.0</version>
+            <version>1.1.1</version>
         </dependency>
 ```
         
 4. 也可以直接复制源码到目标项目中
+5. 使用前，确保项目内已经添加以下依赖
 
+```xml
+        <!-- mybatis-plus-join 1.4.8.1 及以上-->
+        <dependency>
+            <groupId>com.github.yulichang</groupId>
+            <artifactId>mybatis-plus-join-boot-starter</artifactId>
+            <version>1.4.8.1</version>
+        </dependency>
+        
+        <!-- mpj-tool 版本不固定，能用就行-->
+        <dependency>
+            <groupId>org.nimang</groupId>
+            <artifactId>mybatis-plus-join-tool</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+```
 ### 使用文档
 -  主类：用于本次搜索的wrapper初始化时的泛型类，如 `MPJLambdaWrapper<Staff>` 的主类为 `Staff`
 -  调用 MPJUtil 工具类 `build`、`buildSelect`、`buildJoin`、`buildWhere` 等方法组装 `MPJLambdaWrapper`，即可用于查询
+
 #### @MPWhere
 <table>
 <tr><td rowspan=7>@MPWhere</td><td>作用域：<a>字段</a></td><td colspan= 3>标注 Query 查询参数类中用于搜索条件的字段，如该字段在主类且字段名相同，可省略</td></tr>
