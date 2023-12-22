@@ -7,7 +7,8 @@ import org.nimang.mpjtool.enums.RuleKey;
 import java.lang.annotation.*;
 
 /**
- * 查询规则
+ * 搜索规则
+ * <br>标注 Query 查询参数类中用于搜索条件的字段，如该字段在主类且字段名相同，可省略<br/>
  * @author JustHuman
  */
 @Documented
@@ -24,26 +25,29 @@ public @interface MPWhere {
     String alias() default "";
 
     /**
-     * 目标类，默认主类
+     * 目标类
+     * <br>搜索字段所在的类，不设置则为主类</br>
      * @return Class<?>
      */
     Class<?> targetClass() default Void.class;
 
     /**
-     * 字段名，不填默认为当前字段名
+     * 字段名
+     * <br>搜索字段名，不设置则同当前字段名<br/>
      * @return String
      */
     String field() default "";
 
     /**
-     * 规则，默认为EQ
+     * 搜索规则
+     * <br>默认为 RuleKey.EQ<br/>
      * @return RuleKey
      */
     RuleKey rule() default RuleKey.EQ;
 
     /**
      * 优先级
-     * <br>rule 为 BETWEEN 或 NOT_BETWEEN 时，需指定优先级，默认为 BEFORE</br>
+     * <br>当 rule 为 BETWEEN 或 NOT_BETWEEN 时，需指定优先级，默认为 PriorityKey.BEFORE</br>
      * @return PriorityKey
      */
     PriorityKey priority() default PriorityKey.BEFORE;
