@@ -4,13 +4,13 @@
 　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.8.1），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
 - 根据 Query 类的注解，自动拼接 Where 条件，可自动对参数进行判空，支持一个参数对多个字段的查询
-- 根据 Result 类的注解，自动拼接 Select 字段、Join 语句、OrderBy 语句，所需皆所查
+- 根据 Result 类的注解，自动拼接 Select 字段、Join 语句、OrderBy 语句，所查皆所需
 - 简化 service 的查询接口，对于没有复杂需求的连表查询，可开放一个统一接口，应对不同查询需求
 - 支持分段组装，可单独组装 Select、Join、Where 的部分，方便自行扩展条件
 - 具体用法请参考样例项目：https://gitee.com/nimang/mpjtool-demo
 
 ### 简单样例
-　　以 Staff 为主表，先左连接中间表 StaffPost，再右连接职位表 Post，使用 StaffQuery 携带的参数进行查询，并将结果数据封装为 StaffWithPostVO 返回；
+　　以员工表 demo_staff 为主表，先左连接中间表 demo_staff_post，再右连接职位表 demo_post，使用 StaffQuery 携带的参数进行查询，并将结果数据封装为 StaffWithPostVO 返回；
 
 Query 查询参数类
 ```java
@@ -87,17 +87,34 @@ public class StaffWithPostVO implements Serializable {
 
     /** 职位类型 */
     @MPSelect(targetClass = Post.class, field = "type",
-            orderBy = @MPOrderBy(order = OrderKey.ASC, priority = 1))
+            orderBy = @MPOrderBy(order = OrderKey.ASC, priority = 2))
     private Integer postType;
 
     /** 职位类型描述 */
     @MPSelect(targetClass = Post.class, field = "type",
-            enums = @MPEnums(enumClass = PostTypeEnums.class))
+            enums = @MPEnums(enumClass = PostTypeEnums.class, val = "code", msg = "msg"))
     private String postTypeDesc;
 
     /** 加入时间 */
-    @MPSelect(orderBy = @MPOrderBy(order = OrderKey.DESC, priority = 2))
+    @MPSelect(orderBy = @MPOrderBy(order = OrderKey.DESC, priority = 1))
     private LocalDateTime joinTime;
+}
+```
+PostTypeEnums枚举类
+```java
+public enum PostTypeEnums {
+    //管理
+    PT1(1, "管理"),
+    //技术
+    PT2(2, "技术"),
+    //协办
+    PT3(3, "协办"),
+    //普职
+    PT4(4, "普职"),
+    ;
+
+    private Integer code;
+    private String msg;
 }
 ```
 Service执行方法
@@ -258,6 +275,7 @@ private String loginName;
 ```java
 /**
  * 使用 LEFT JOIN 规则，左表类为 Staff.class，别名为 leaderStaff，右表类为 Staff.class，ON 条件为 id = leaderId
+ * 使用 LEFT JOIN 规则，左表类为 StaffPost.class，右表类为 Staff.class，右表别名(主表默认别名)为 t， ON 条件为 id = staffId
  * sql样例：
  * LEFT JOIN demo_staff leaderStaff 
  *  ON ( leaderStaff.`id` = t.`leader_id` )
@@ -265,15 +283,21 @@ private String loginName;
 @MPJoin(leftClass = Staff.class, leftAlias = "leaderStaff", join = JoinKey.LEFT_JOIN, ons = {
         @MPOn(leftField = "id", rightClass = Staff.class, rightField = "leaderId")
 })
+@MPJoin(leftClass = StaffPost.class, join = JoinKey.LEFT_JOIN, ons = {
+        @MPOn(leftField = "staffId", rightClass = Staff.class, leftAlias = "t", rightField = "id")
+})
 public class StaffWithLeaderVO implements Serializable {
     ......
 }
 
 /**
- * 以上样例中，主类为 Staff.class，规则为 LEFT JOIN，可简化为以下样例
+ * 以上样例中，主类为 Staff.class，规则为 LEFT JOIN，可简化为以下形式
  */
 @MPJoin(leftAlias = "leaderStaff", ons = {
         @MPOn(leftField = "id", rightField = "leaderId")
+})
+@MPJoin(leftClass = StaffPost.class, ons = {
+        @MPOn(leftField = "staffId", rightField = "id")
 })
 public class StaffWithLeaderVO implements Serializable {
     ......
@@ -321,36 +345,6 @@ public class StaffWithLeaderVO implements Serializable {
         @MPOn(leftField = "leaderId", rule = RuleKey.IS_NOT_NULL),
         @MPOn(leftField = "no", rule = RuleKey.LIKE_RIGHT, val = "10"),
         @MPOn(leftField = "joinTime", rule = RuleKey.GE, val = "2023-11-01 00:00:00")
-})
-```
-</td></tr>
-</table>
-
-#### @MPJoins
-<table>
-<tr><td rowspan=3>@MPJoins</td><td>作用域：<a>类</a></td><td colspan= 3>当需连接多张表时，可用于包裹多个 @MPJoin 配置</td></tr>
-<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
-<tr><td><a>joins</a></td><td>MPJoin[ ]</td><td colspan= 2>join规则组：<i>配置的 @MPJoin 组合</i></td></tr>
-<tr><td colspan= 5>
-
-```java
-/**
- * sql样例：
- * FROM 
- *   demo_staff t 
- * LEFT JOIN 
- *   demo_staff_post t1 ON ( t1.`staff_id` = t.`id` ) 
- * RIGHT JOIN 
- *   demo_post t2 ON ( t2.`id` = t1.`post_id` AND t2.`type` <> 1 ) 
- */ 
-@MPJoins(joins = {
-        @MPJoin(leftClass = StaffPost.class, ons = {
-                @MPOn(leftField = "staffId", rightField = "id")
-        }),
-        @MPJoin(leftClass = Post.class, join = JoinKey.RIGHT_JOIN, ons = {
-                @MPOn(leftField = "id", rightClass = StaffPost.class, rightField = "postId"),
-                @MPOn(leftField = "type", val = "1", rule = RuleKey.NE)
-        })
 })
 ```
 </td></tr>

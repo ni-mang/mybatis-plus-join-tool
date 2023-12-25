@@ -202,8 +202,8 @@ public class MPJUtil {
         if(mpJoin != null){
             processJoin(wrapper, mainClass, mpJoin, result);
         }else if (mpJoins != null){
-            if(ObjectUtil.isNotEmpty(mpJoins.joins())){
-                for (MPJoin subMPJoin : mpJoins.joins()){
+            if(ObjectUtil.isNotEmpty(mpJoins.value())){
+                for (MPJoin subMPJoin : mpJoins.value()){
                     processJoin(wrapper, mainClass, subMPJoin, result);
                 }
             }

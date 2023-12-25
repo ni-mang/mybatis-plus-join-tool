@@ -12,6 +12,7 @@ import java.lang.annotation.*;
  */
 @Documented
 @Inherited
+@Repeatable(MPJoins.class)
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MPJoin {

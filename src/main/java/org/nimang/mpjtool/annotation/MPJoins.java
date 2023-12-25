@@ -16,5 +16,5 @@ public @interface MPJoins {
      * join规则组
      * @return MPJoin[]
      */
-    MPJoin[] joins() default {};
+    MPJoin[] value() default {};
 }
