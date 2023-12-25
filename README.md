@@ -1,5 +1,6 @@
 # MPJTool（mybatis-plus-join-tool）
-
+### 联系邮箱
+　　362682205@qq.com
 ### 介绍
 　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.8.1），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
@@ -56,14 +57,12 @@ public class StaffQuery implements Serializable {
 Result 结果返回类
 ```java
 @Data
-@MPJoins(joins = {
-        @MPJoin(leftClass = StaffPost.class, ons = {
-                @MPOn(leftField = "staffId", rightField = "id")
-        }),
-        @MPJoin(leftClass = Post.class, join = JoinKey.RIGHT_JOIN, ons = {
-                @MPOn(leftField = "id", rightClass = StaffPost.class, rightField = "postId"),
-                @MPOn(leftField = "type", val = "1", rule = RuleKey.NE)
-        })
+@MPJoin(leftClass = StaffPost.class, ons = {
+        @MPOn(leftField = "staffId", rightField = "id")
+})
+@MPJoin(leftClass = Post.class, join = JoinKey.RIGHT_JOIN, ons = {
+        @MPOn(leftField = "id", rightClass = StaffPost.class, rightField = "postId"),
+        @MPOn(leftField = "type", val = "1", rule = RuleKey.NE)
 })
 public class StaffWithPostVO implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -86,8 +85,8 @@ public class StaffWithPostVO implements Serializable {
     private Integer postId;
 
     /** 职位类型 */
-    @MPSelect(targetClass = Post.class, field = "type",
-            orderBy = @MPOrderBy(order = OrderKey.ASC, priority = 2))
+    @MPSelect(targetClass = Post.class, field = "type")
+    @MPOrderBy(order = OrderKey.ASC, priority = 2)
     private Integer postType;
 
     /** 职位类型描述 */
@@ -96,7 +95,7 @@ public class StaffWithPostVO implements Serializable {
     private String postTypeDesc;
 
     /** 加入时间 */
-    @MPSelect(orderBy = @MPOrderBy(order = OrderKey.DESC, priority = 1))
+    @MPOrderBy(order = OrderKey.DESC, priority = 1)
     private LocalDateTime joinTime;
 }
 ```
@@ -161,8 +160,8 @@ WHERE
 		AND t.`join_time` <= '2023-12-30T23:59:59' 
 	) 
 ORDER BY
-	t2.`type` ASC,
-	t.`join_time` DESC
+	t.`join_time` DESC,
+    t2.`type` ASC
 ```
 
 ### 安装教程
@@ -357,7 +356,6 @@ public class StaffWithLeaderVO implements Serializable {
 <tr><td><a>targetClass</a></td><td>Class</td><td colspan= 2>目标类class：<i>返回字段所在的类，不设置则默认为主类</i></td></tr>
 <tr><td><a>alias</a></td><td>String</td><td colspan= 2>别名：<i>不设置则按默认别名，主表为“t”，连接表分别按“t1,t2,t3...”顺序命名</i></td></tr>
 <tr><td><a>field</a></td><td>String</td><td colspan= 2>字段名：<i>返回字段名，不设置则同当前字段名</i></td></tr>
-<tr><td><a>orderBy</a></td><td>MPOrderBy</td><td colspan= 2>排序注解：<i>设置以当前字段排序与排序规则</i></td></tr>
 <tr><td><a>enums</a></td><td>MPEnums</td><td colspan= 2>枚举注解：<i>设置当前字段与指定枚举类的数据转换</i></td></tr>
 <tr><td colspan= 5>
 
@@ -382,19 +380,19 @@ private String orgName;
 
 #### @MPOrderBy
 <table>
-<tr><td rowspan=4>@MPOrderBy</td><td>作用域：<a>字段</a></td><td colspan= 3>排序，依赖于@MPSelect，设置以当前字段排序与排序规则</td></tr>
+<tr><td rowspan=4>@MPOrderBy</td><td>作用域：<a>字段</a></td><td colspan= 3>排序，设置当前字段排序规则</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
-<tr><td><a>order</a></td><td>OrderKey</td><td colspan= 2>排列规则：<i>正序或倒序，默认不排序</i></td></tr>
+<tr><td><a>order</a></td><td>OrderKey</td><td colspan= 2>排列规则：<i>默认正序 OrderKey.ASC</i></td></tr>
 <tr><td><a>priority</a></td><td>int</td><td colspan= 2>排列条件优先级：<i>默认为0，数值越低，优先级越高</i></td></tr>
 <tr><td colspan= 5>
 
 ```java
 /**
  * 职位类型
- * sql样例: SELECT t1.`type` AS postType ... ORDER BY t1.`type` ASC,
+ * sql样例: SELECT t1.`type` AS postType ... ORDER BY t1.`type` DESC,
  */
-@MPSelect(targetClass = Post.class, field = "type",
-        orderBy = @MPOrderBy(order = OrderKey.ASC, priority = 1))
+@MPSelect(targetClass = Post.class, field = "type")
+@MPOrderBy(order = OrderKey.DESC, priority = 1)
 private Integer postType;
 
 ```
@@ -403,9 +401,9 @@ private Integer postType;
 
 #### @MPEnums
 <table>
-<tr><td rowspan=5>@MPEnums</td><td>作用域：<a>字段</a></td><td colspan= 3>枚举值转换，依赖于@MPSelect，设置当前字段与指定枚举类的数据转换</td></tr>
+<tr><td rowspan=5>@MPEnums</td><td>作用域：<a>字段</a></td><td colspan= 3>枚举值转换，设置当前字段与指定枚举类的数据转换</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
-<tr><td><a>enumClass</a></td><td>Class</td><td colspan= 2>枚举类：<i>继承 Enum 的枚举类型</i></td></tr>
+<tr><td><a>enumClass</a></td><td>Class</td><td colspan= 2>枚举类：<i>必须，枚举类型</i></td></tr>
 <tr><td><a>val</a></td><td>String</td><td colspan= 2>值属性名：<i>枚举类中表示值的字段名，默认“code”</i></td></tr>
 <tr><td><a>msg</a></td><td>String</td><td colspan= 2>描述属性名：<i>枚举类中表示注释描述的字段名，默认“msg”</i></td></tr>
 <tr><td colspan= 5>
@@ -413,11 +411,20 @@ private Integer postType;
 ```java
 /**
  * 职位类型
- * sql样例: SELECT t1.`type` AS postType ... ORDER BY t1.`type` ASC,
+ * sql样例: 
+ * SELECT 
+ *  CASE t1.`type` 
+ *    WHEN 1 THEN '管理' 
+ *    WHEN 2 THEN '技术' 
+ *    WHEN 3 THEN '协办' 
+ *    WHEN 4 THEN '普职' 
+ *    ELSE '' 
+ *  END AS postTypeDesc,
+ *  ...
  */
-@MPSelect(targetClass = Post.class, field = "type",
-        orderBy = @MPOrderBy(order = OrderKey.ASC, priority = 1))
-private Integer postType;
+@MPSelect(targetClass = Post.class, field = "type")
+@MPEnums(enumClass = PostTypeEnums.class, val = "code", msg = "msg")
+private String postTypeDesc;
 
 ```
 </td></tr>

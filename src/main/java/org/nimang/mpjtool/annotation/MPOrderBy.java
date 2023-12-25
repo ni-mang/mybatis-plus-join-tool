@@ -21,7 +21,7 @@ public @interface MPOrderBy {
      * <br>正序或倒序，默认不排序</br>
      * @return OrderKey
      */
-    OrderKey order() default OrderKey.NONE;
+    OrderKey order() default OrderKey.ASC;
 
     /**
      * 排列条件优先级

@@ -17,7 +17,7 @@ public @interface MPEnums {
      * 枚举类
      * @return Class<? extends Enum>
      */
-    Class<? extends Enum> enumClass() default Enum.class;
+    Class<? extends Enum> enumClass();
 
     /**
      * 值属性名

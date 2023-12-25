@@ -33,18 +33,4 @@ public @interface MPSelect {
      * @return String
      */
     String field() default "";
-
-    /**
-     * 排序注解
-     * <br>设置以当前字段排序与排序规则</br>
-     * @return MPOrderBy
-     */
-    MPOrderBy orderBy() default @MPOrderBy;
-
-    /**
-     * 枚举注解
-     * <br>设置当前字段与指定枚举类的数据转换</br>
-     * @return MPEnums
-     */
-    MPEnums enums() default @MPEnums;
 }

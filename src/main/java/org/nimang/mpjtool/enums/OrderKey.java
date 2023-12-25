@@ -5,7 +5,6 @@ package org.nimang.mpjtool.enums;
  */
 public enum OrderKey {
 
-    NONE,
     ASC,
     DESC,
 

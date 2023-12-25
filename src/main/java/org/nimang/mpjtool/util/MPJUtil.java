@@ -129,8 +129,6 @@ public class MPJUtil {
             if(mpIgnore != null){
                 continue;
             }
-            MPOrder mpOrder = null;
-            MPEnums mpEnums = null;
             Class<?> source = mainClass;
             String alias = "";
             String field = cField.getName();
@@ -142,24 +140,24 @@ public class MPJUtil {
                 if(StrUtil.isNotBlank(mpSelect.field())){
                     field = mpSelect.field();
                 }
-                if(!OrderKey.NONE.equals(mpSelect.orderBy().order())){
-                    mpOrder = new MPOrder();
-                    mpOrder.setPriority(mpSelect.orderBy().priority());
-                    mpOrder.setIsAsc(OrderKey.ASC.equals(mpSelect.orderBy().order()));
-                    resultList.add(mpOrder);
-                }
-                mpEnums = mpSelect.enums();
                 alias = mpSelect.alias();
             } else if (NEED_ANNOTATION){
                 continue;
             }
             MPSFunction<?> sourceMask = getMask(source, field, "SELECT", result.getName());
             MPSFunction<?> resultMask = getMask(result, cField.getName(), "SELECT", result.getName());
-            if(mpOrder != null){
+            // 排序
+            MPOrderBy mpOrderBy = cField.getAnnotation(MPOrderBy.class);
+            if(mpOrderBy != null){
+                MPOrder mpOrder = new MPOrder();
+                mpOrder.setPriority(mpOrderBy.priority());
+                mpOrder.setIsAsc(OrderKey.ASC.equals(mpOrderBy.order()));
                 mpOrder.setMask(sourceMask);
+                resultList.add(mpOrder);
             }
-
-            if(mpEnums != null && !Enum.class.equals(mpEnums.enumClass())){
+            // 枚举
+            MPEnums mpEnums = cField.getAnnotation(MPEnums.class);
+            if(mpEnums != null){
                 // 枚举转换
                 try {
                     String target = StrUtil.isBlank(alias) ? "" : alias + ".`" + field + "`";
