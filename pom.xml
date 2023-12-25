@@ -19,7 +19,6 @@
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-core</artifactId>
             <version>3.5.1</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- mybatis-plus-join -->
@@ -27,7 +26,6 @@
             <groupId>com.github.yulichang</groupId>
             <artifactId>mybatis-plus-join-boot-starter</artifactId>
             <version>1.4.8.1</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Hutool工具类库 -->
@@ -35,7 +33,6 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-all</artifactId>
             <version>5.8.11</version>
-            <scope>provided</scope>
         </dependency>
 
     </dependencies>

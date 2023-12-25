@@ -174,28 +174,12 @@ ORDER BY
         <dependency>
             <groupId>org.nimang</groupId>
             <artifactId>mybatis-plus-join-tool</artifactId>
-            <version>1.1.1</version>
+            <version>1.2.0</version>
         </dependency>
 ```
         
 4. 也可以直接复制源码到目标项目中
-5. 使用前，确保项目内已经添加以下依赖
 
-```xml
-        <!-- mybatis-plus-join 1.4.8.1 及以上-->
-        <dependency>
-            <groupId>com.github.yulichang</groupId>
-            <artifactId>mybatis-plus-join-boot-starter</artifactId>
-            <version>1.4.8.1</version>
-        </dependency>
-        
-        <!-- mpj-tool 版本不固定，能用就行-->
-        <dependency>
-            <groupId>org.nimang</groupId>
-            <artifactId>mybatis-plus-join-tool</artifactId>
-            <version>1.1.1</version>
-        </dependency>
-```
 ### 使用文档
 -  主类：用于本次搜索的wrapper初始化时的泛型类，如 `MPJLambdaWrapper<Staff>` 的主类为 `Staff`
 -  调用 MPJUtil 工具类 `build`、`buildSelect`、`buildJoin`、`buildWhere` 等方法组装 `MPJLambdaWrapper`，即可用于查询
