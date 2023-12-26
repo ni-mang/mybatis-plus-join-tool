@@ -445,7 +445,7 @@ private Integer pageSize;
 　　本工具仅支持常用的 where 语句（如：eq、like、ge...）及 join、orderBy，不支持 full join、union、group、func 等操作，如需执行此类复杂查询，可使用分段组装后，使用 mybatis-plus-join 拼接相应语句
 
 ### 联系邮箱
-362682205@qq.com
+　　362682205@qq.com
 
 ### 推荐项目
 - [PUPA代码生成器](https://gitee.com/nimang/pupa)
