@@ -95,8 +95,8 @@ public class StaffWithPostVO implements Serializable {
     private Integer postType;
 
     /** 职位类型描述 */
-    @MPSelect(targetClass = Post.class, field = "type",
-            enums = @MPEnums(enumClass = PostTypeEnums.class, val = "code", msg = "msg"))
+    @MPSelect(targetClass = Post.class, field = "type")
+    @MPEnums(enumClass = PostTypeEnums.class, val = "code", msg = "msg")
     private String postTypeDesc;
 
     /** 加入时间 */
