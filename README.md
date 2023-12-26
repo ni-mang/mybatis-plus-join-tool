@@ -4,16 +4,33 @@
 ### 介绍
 　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.8.1），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
-　　Github：https://github.com/ni-mang/mybatis-plus-join-tool
-</br>
-　　Gitee：https://gitee.com/nimang/mpjtool
-
-
 - 根据 Query 类的注解，自动拼接 Where 条件，可自动对参数进行判空，支持一个参数对多个字段的查询
 - 根据 Result 类的注解，自动拼接 Select 字段、Join 语句、OrderBy 语句，所查皆所需
 - 简化 service 的查询接口，对于没有复杂需求的连表查询，可开放一个统一接口，应对不同查询需求
 - 支持分段组装，可单独组装 Select、Join、Where 的部分，方便自行扩展条件
 - 具体用法请参考样例项目：https://gitee.com/nimang/mpjtool-demo
+
+### 如何安装
+1. 确保项目使用的是 JDK1.8 或以上版本
+2. 添加 JitPack 仓库到依赖项目的 pom.xml 文件中（如果还没有添加的话），应与 dependencies 同级
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+3. 在依赖项目的 pom.xml 文件中添加如下依赖
+
+```xml
+<dependency>
+    <groupId>com.gitee.nimang</groupId>
+    <artifactId>mpjtool</artifactId>
+    <version>v1.2.1</version>
+</dependency>
+```
 
 ### 简单样例
 　　以员工表 demo_staff 为主表，先左连接中间表 demo_staff_post，再右连接职位表 demo_post，使用 StaffQuery 携带的参数进行查询，并将结果数据封装为 StaffWithPostVO 返回；
@@ -106,6 +123,7 @@ public class StaffWithPostVO implements Serializable {
 ```
 PostTypeEnums枚举类
 ```java
+@Getter
 public enum PostTypeEnums {
     //管理
     PT1(1, "管理"),
@@ -121,14 +139,14 @@ public enum PostTypeEnums {
     private String msg;
 }
 ```
-Service执行方法
+Service方法
 ```java
     public List<StaffWithPostVO> querySingle(StaffQuery query) {
         MPJLambdaWrapper<Staff> wrapper = MPJUtil.build(Staff.class, query, StaffWithPostVO.class);
         return baseMapper.selectJoinList(StaffWithPostVO.class, wrapper);
     }
 ```
-执行Sql
+实际执行Sql
 ```sql
 SELECT
 	t.`id` AS id,
@@ -168,52 +186,6 @@ ORDER BY
 	t.`join_time` DESC,
     t2.`type` ASC
 ```
-
-### 如何安装
-　　确保项目使用的是 JDK1.8 或以上版本；可采用以下三种方案中的任一种进行安装使用。
-#### 一、通过 Jitpack 依赖
-1. 添加 JitPack 仓库到依赖项目的 pom.xml 文件中（如果你的依赖者还没有添加的话），应与 dependencies 同级
-
-```xml
-<repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
-```
-2. 在依赖项目的 pom.xml 文件中添加如下依赖，以下分别为 Github 与 Gitee 两个代码平台的依赖方式，任选其一即可
-
-```xml
-<!--Github-->
-<dependency>
-    <groupId>com.github.ni-mang</groupId>
-    <artifactId>mybatis-plus-join-tool</artifactId>
-    <version>v1.2.1</version>
-</dependency>
-
-<!--Gitee-->
-<dependency>
-    <groupId>com.gitee.nimang</groupId>
-    <artifactId>mpjtool</artifactId>
-    <version>v1.2.1</version>
-</dependency>
-```
-
-#### 二、本地打包
-1.  下载 MPJTool 项目代码到本地
-2.  使用 Maven 工具执行 install 操作，将项目进行打包并加入本地 Maven 库
-3.  在依赖项目的 pom.xml 文件中添加如下依赖
-
-```xml
-<dependency>
-    <groupId>org.nimang</groupId>
-    <artifactId>mybatis-plus-join-tool</artifactId>
-    <version>1.2.1</version>
-</dependency>
-```
-#### 三、直接使用源码
-1. 直接复制源码到需要使用的项目中
 
 ### 注解文档
 -  主类：用于本次搜索的wrapper初始化时的泛型类，如 `MPJLambdaWrapper<Staff>` 的主类为 `Staff`
