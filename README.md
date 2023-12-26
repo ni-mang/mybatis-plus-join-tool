@@ -170,7 +170,7 @@ ORDER BY
 ```
 
 ### 如何安装
-　　确保目标项目使用的是 JDK1.8 或以上版本；可采用以下三种方案中的任一种进行安装使用。
+　　确保项目使用的是 JDK1.8 或以上版本；可采用以下三种方案中的任一种进行安装使用。
 #### 一、通过 Jitpack 依赖
 1. 添加 JitPack 仓库到依赖项目的 pom.xml 文件中（如果你的依赖者还没有添加的话），应与 dependencies 同级
 
@@ -182,12 +182,20 @@ ORDER BY
     </repository>
 </repositories>
 ```
-2. 在依赖项目的 pom.xml 文件中添加如下依赖
+2. 在依赖项目的 pom.xml 文件中添加如下依赖，以下分别为 Github 与 Gitee 两个代码平台的依赖方式，任选其一即可
 
 ```xml
+<!--Github-->
 <dependency>
     <groupId>com.github.ni-mang</groupId>
     <artifactId>mybatis-plus-join-tool</artifactId>
+    <version>v1.2.1</version>
+</dependency>
+
+<!--Gitee-->
+<dependency>
+    <groupId>com.gitee.nimang</groupId>
+    <artifactId>mpjtool</artifactId>
     <version>v1.2.1</version>
 </dependency>
 ```
