@@ -1,6 +1,4 @@
 # MPJTool（mybatis-plus-join-tool）
-### 联系邮箱
-　　362682205@qq.com
 ### 介绍
 　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.8.1），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
@@ -445,6 +443,9 @@ private Integer pageSize;
 
 ### 须知
 　　本工具仅支持常用的 where 语句（如：eq、like、ge...）及 join、orderBy，不支持 full join、union、group、func 等操作，如需执行此类复杂查询，可使用分段组装后，使用 mybatis-plus-join 拼接相应语句
+
+### 联系邮箱
+362682205@qq.com
 
 ### 推荐项目
 - [PUPA代码生成器](https://gitee.com/nimang/pupa)
