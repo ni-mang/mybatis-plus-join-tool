@@ -169,23 +169,45 @@ ORDER BY
     t2.`type` ASC
 ```
 
-### 安装教程
-　　由于目前没有上传到 Maven 公共仓库，因此需要自行打包
-1.  下载项目代码到本地
-2.  使用 Maven 工具执行 install 操作，将项目进行打包并加入本地 Maven 库
-3.  在需要用到 MPJTool 的项目里添加如下依赖：
+### 如何安装
+　　确保目标项目使用的是 JDK1.8 或以上版本；可采用以下三种方案中的任一种进行安装使用。
+#### 一、通过 Jitpack 依赖
+1. 添加 JitPack 仓库到依赖项目的 pom.xml 文件中（如果你的依赖者还没有添加的话），应与 dependencies 同级
 
 ```xml
-        <dependency>
-            <groupId>org.nimang</groupId>
-            <artifactId>mybatis-plus-join-tool</artifactId>
-            <version>1.2.0</version>
-        </dependency>
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
 ```
-        
-4. 也可以直接复制源码到目标项目中
+2. 在依赖项目的 pom.xml 文件中添加如下依赖
 
-### 使用文档
+```xml
+<dependency>
+    <groupId>com.github.ni-mang</groupId>
+    <artifactId>mybatis-plus-join-tool</artifactId>
+    <version>v1.2.1</version>
+</dependency>
+```
+
+#### 二、本地打包
+1.  下载 MPJTool 项目代码到本地
+2.  使用 Maven 工具执行 install 操作，将项目进行打包并加入本地 Maven 库
+3.  在依赖项目的 pom.xml 文件中添加如下依赖
+
+```xml
+<dependency>
+    <groupId>org.nimang</groupId>
+    <artifactId>mybatis-plus-join-tool</artifactId>
+    <version>1.2.1</version>
+</dependency>
+```
+#### 三、直接使用源码
+1. 直接复制源码到需要使用的项目中
+
+### 注解文档
 -  主类：用于本次搜索的wrapper初始化时的泛型类，如 `MPJLambdaWrapper<Staff>` 的主类为 `Staff`
 -  调用 MPJUtil 工具类 `build`、`buildSelect`、`buildJoin`、`buildWhere` 等方法组装 `MPJLambdaWrapper`，即可用于查询
 
