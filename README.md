@@ -1,4 +1,6 @@
 # MPJTool（mybatis-plus-join-tool）
+[![](https://jitpack.io/v/com.gitee.nimang/mpjtool.svg)](https://jitpack.io/#com.gitee.nimang/mpjtool)
+
 ### 介绍
 　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.9），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
@@ -9,7 +11,7 @@
 - 具体用法请参考样例项目：https://gitee.com/nimang/mpjtool-demo
 
 ### 如何安装
-1. 确保项目使用的是 JDK1.8 或以上版本
+1. 确保项目使用的是 JDK1.8 或以上版本，MyBatis Plus 版本需要3.3.0+
 2. 添加 JitPack 仓库到依赖项目的 pom.xml 文件中（如果还没有添加的话），应与 dependencies 同级
 
 ```xml
