@@ -1,8 +1,20 @@
 # MPJTool（mybatis-plus-join-tool）
-[![](https://jitpack.io/v/com.gitee.nimang/mpjtool.svg)](https://jitpack.io/#com.gitee.nimang/mpjtool)
+
+
+<p align="center">
+    <a target="_blank" href="https://jitpack.io/#com.gitee.nimang/mpjtool">
+		<img src="https://jitpack.io/v/com.gitee.nimang/mpjtool.svg" />
+	</a>
+    <a target="_blank" href="https://mybatisplusjoin.com">
+		<img src="https://img.shields.io/badge/MPJ-1.4.9-green.svg" />
+	</a>
+    <a target="_blank" href='https://gitee.com/nimang/mpjtool/stargazers'>
+		<img src='https://gitee.com/nimang/mpjtool/badge/star.svg?theme=gvp' alt='star'/>
+	</a>
+</p>
 
 ### 介绍
-　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.9），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
+　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)，通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
 - 根据 Query 类的注解，自动拼接 Where 条件，可自动对参数进行判空，支持一个参数对多个字段的查询
 - 根据 Result 类的注解，自动拼接 Select 字段、Join 语句、OrderBy 语句，所查皆所需
