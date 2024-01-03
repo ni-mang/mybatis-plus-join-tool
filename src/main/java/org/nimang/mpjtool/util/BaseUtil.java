@@ -15,12 +15,33 @@ public class BaseUtil {
      */
     public static List<Field> getAllDeclaredFields(Class<?> tempClass){
         List<Field> fieldList = new ArrayList<>();
-        while (tempClass != null) {//当父类为null的时候说明到达了最上层的父类(Object类).
-            fieldList.addAll(Arrays.asList(tempClass .getDeclaredFields()));
-            tempClass = tempClass.getSuperclass(); //得到父类,然后赋给自己
+        Class<?> clazz = tempClass;
+        while (clazz != null && Object.class.isAssignableFrom(clazz)) {
+            fieldList.addAll(Arrays.asList(clazz .getDeclaredFields()));
+            clazz = clazz.getSuperclass(); //得到父类,然后赋给自己
         }
         return fieldList;
     }
+
+    /**
+     * 根据类和字段名获取字段对象
+     * @param clazz 待搜索的类对象
+     * @param fieldName 字段名
+     * @return 返回字段对象，如果找不到则返回null
+     */
+    public static Field getField(Class<?> clazz, String fieldName) {
+        Field field = null;
+        Class<?> targetClass = clazz;
+        while (field == null && targetClass != null) {
+            try {
+                field = targetClass.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                targetClass = targetClass.getSuperclass();
+            }
+        }
+        return field;
+    }
+
 
     /**
      * 将字符串合集转换为指定属性的类型
@@ -45,17 +66,8 @@ public class BaseUtil {
      * @return Object
      */
     public static Object convert(Class<?> tClass, String fieldName, String val){
-        Object result;
-        try {
-            Field field = tClass.getDeclaredField(fieldName);
-            Class<?> fieldType = field.getType();
-            if(val == null){
-                return null;
-            }
-            result = Convert.convert(fieldType, val);
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
-        return result;
+        Field field = getField(tClass, fieldName);
+        Class<?> fieldType = field.getType();
+        return val == null ? null : Convert.convert(fieldType, val);
     }
 }
