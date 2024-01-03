@@ -5,7 +5,7 @@
 
     <groupId>org.nimang</groupId>
     <artifactId>mybatis-plus-join-tool</artifactId>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
     <name>MPJTool</name>
     <description>MPJTool</description>
 
@@ -25,7 +25,7 @@
         <dependency>
             <groupId>com.github.yulichang</groupId>
             <artifactId>mybatis-plus-join-boot-starter</artifactId>
-            <version>1.4.8.1</version>
+            <version>1.4.9</version>
         </dependency>
 
         <!-- Hutool工具类库 -->

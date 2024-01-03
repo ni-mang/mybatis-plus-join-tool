@@ -1,6 +1,6 @@
 # MPJTool（mybatis-plus-join-tool）
 ### 介绍
-　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.8.1），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
+　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)（1.4.9），通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
 - 根据 Query 类的注解，自动拼接 Where 条件，可自动对参数进行判空，支持一个参数对多个字段的查询
 - 根据 Result 类的注解，自动拼接 Select 字段、Join 语句、OrderBy 语句，所查皆所需
@@ -26,7 +26,7 @@
 <dependency>
     <groupId>com.gitee.nimang</groupId>
     <artifactId>mpjtool</artifactId>
-    <version>v1.2.1</version>
+    <version>v1.2.2</version>
 </dependency>
 ```
 

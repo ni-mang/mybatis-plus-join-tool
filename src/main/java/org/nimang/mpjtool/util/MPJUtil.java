@@ -5,7 +5,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReflectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.github.yulichang.wrapper.MPJAbstractLambdaWrapper;
+import com.github.yulichang.wrapper.JoinAbstractLambdaWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.nimang.mpjtool.annotation.*;
 import org.nimang.mpjtool.enums.LogicKey;
@@ -120,13 +120,8 @@ public class MPJUtil {
         List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
         List<MPOrder> resultList = new ArrayList<>();
         for (Field cField:cFields){
-            // 忽略静态字段
-            if(Modifier.isStatic(cField.getModifiers())){
-                continue;
-            }
-            // 忽略添加 @MPIgnore 注解的字段
-            MPIgnore mpIgnore = cField.getAnnotation(MPIgnore.class);
-            if(mpIgnore != null){
+            // 忽略静态字段和被注解忽略的字段
+            if (isStaticField(cField) || isFieldIgnored(cField)) {
                 continue;
             }
             Class<?> source = mainClass;
@@ -294,18 +289,13 @@ public class MPJUtil {
         Map<String, MPCondition> betweenConditions = new LinkedHashMap<>();
         String queryName = query.getClass().getName();
         for (Field cField:cFields){
-            // 忽略静态字段
-            if(Modifier.isStatic(cField.getModifiers())){
+            // 忽略静态字段和被注解忽略的字段
+            if (isStaticField(cField) || isFieldIgnored(cField)) {
                 continue;
             }
             // 如字段值为空则忽略
             Object val = ReflectUtil.getFieldValue(query, cField);
             if(ObjectUtil.isEmpty(val)){
-                continue;
-            }
-            // 忽略添加 @MPIgnore 注解的字段
-            MPIgnore mpIgnore = cField.getAnnotation(MPIgnore.class);
-            if(mpIgnore != null){
                 continue;
             }
             MPWheres mpWheres = cField.getAnnotation(MPWheres.class);
@@ -410,7 +400,7 @@ public class MPJUtil {
      * @param wrapper MPJLambdaWrapper<T>
      * @param condition MPCondition
      */
-    private static <T> void valCondition(MPJAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
+    private static <T> void valCondition(JoinAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
         String alias = StrUtil.isBlank(condition.getAlias()) ? null : condition.getAlias();
         MPSFunction<?> mask = condition.getMask();
         Object val = condition.getVal();
@@ -467,7 +457,7 @@ public class MPJUtil {
      * @param wrapper MPJLambdaWrapper<T>
      * @param condition MPCondition
      */
-    private static <T> void funCondition(MPJAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
+    private static <T> void funCondition(JoinAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
         String alias = StrUtil.isBlank(condition.getAlias()) ? null : condition.getAlias();
         MPSFunction<?> mask = condition.getMask();
         String rightAlias = StrUtil.isBlank(condition.getRightAlias()) ? null : condition.getRightAlias();
@@ -488,6 +478,13 @@ public class MPJUtil {
 
     /***********************************  Condition END  ***********************************/
 
+    private static boolean isFieldIgnored(Field field) {
+        return field.isAnnotationPresent(MPIgnore.class);
+    }
+
+    private static boolean isStaticField(Field field) {
+        return Modifier.isStatic(field.getModifiers());
+    }
 
     private static <T> MPSFunction<T> getMask(Class<T> clazz, String filedName, String point, String configClassName){
         checkField(clazz, filedName, point, configClassName);
