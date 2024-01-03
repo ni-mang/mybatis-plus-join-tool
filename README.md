@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.gitee.nimang</groupId>
     <artifactId>mpjtool</artifactId>
-    <version>v1.2.2</version>
+    <version>1.2.2</version>
 </dependency>
 ```
 
