@@ -5,8 +5,17 @@
     <a target="_blank" href="https://jitpack.io/#com.gitee.nimang/mpjtool">
 		<img src="https://jitpack.io/v/com.gitee.nimang/mpjtool.svg" />
 	</a>
+    <a target="_blank" href="https://www.oracle.com/java/technologies/javase/javase-jdk8-downloads.html">
+		<img src="https://img.shields.io/badge/JDK-8+-green.svg" />
+	</a>
+    <a target="_blank" href="https://baomidou.com">
+		<img src="https://img.shields.io/badge/MP-3.5.5-green.svg" />
+	</a>
     <a target="_blank" href="https://mybatisplusjoin.com">
 		<img src="https://img.shields.io/badge/MPJ-1.4.9-green.svg" />
+	</a>
+    <a target="_blank" href="https://hutool.cn">
+		<img src="https://img.shields.io/badge/Hutool-5.8.24-green.svg" />
 	</a>
     <a target="_blank" href='https://gitee.com/nimang/mpjtool/stargazers'>
 		<img src='https://gitee.com/nimang/mpjtool/badge/star.svg?theme=gvp' alt='star'/>
@@ -23,7 +32,7 @@
 - 具体用法请参考样例项目：https://gitee.com/nimang/mpjtool-demo
 
 ### 如何安装
-1. 确保项目使用的是 JDK1.8 或以上版本，MyBatis Plus 版本需要3.3.0+
+1. 确保项目使用的是 JDK 8 或以上版本，MyBatis Plus 3.5.5 版本
 2. 添加 JitPack 仓库到依赖项目的 pom.xml 文件中（如果还没有添加的话），应与 dependencies 同级
 
 ```xml
