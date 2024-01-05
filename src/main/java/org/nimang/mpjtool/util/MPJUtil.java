@@ -135,7 +135,7 @@ public class MPJUtil {
                 if(StrUtil.isNotBlank(mpSelect.field())){
                     field = mpSelect.field();
                 }
-                alias = mpSelect.alias();
+                alias = StrUtil.isBlank(mpSelect.alias()) ? null: mpSelect.alias();
             } else if (NEED_ANNOTATION){
                 continue;
             }
@@ -148,6 +148,7 @@ public class MPJUtil {
                 mpOrder.setPriority(mpOrderBy.priority());
                 mpOrder.setIsAsc(OrderKey.ASC.equals(mpOrderBy.order()));
                 mpOrder.setMask(sourceMask);
+                mpOrder.setAlias(alias);
                 resultList.add(mpOrder);
             }
             // 枚举
@@ -173,7 +174,7 @@ public class MPJUtil {
         if(withOrder) {
             CollectionUtil.sort(resultList, Comparator.comparingInt(MPOrder::getPriority));
             resultList.forEach(o -> {
-                wrapper.orderBy(true, o.getIsAsc(), o.getMask());
+                wrapper.orderBy(true, o.getIsAsc(), o.getAlias(), o.getMask());
             });
         }
         return wrapper;

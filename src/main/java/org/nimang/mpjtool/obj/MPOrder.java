@@ -9,6 +9,7 @@ import org.nimang.mpjtool.fun.MPSFunction;
  */
 public class MPOrder {
     private Integer priority;
+    private String alias;
     private MPSFunction<?> mask;
     private Boolean isAsc;
 
@@ -18,6 +19,14 @@ public class MPOrder {
 
     public void setPriority(Integer priority) {
         this.priority = priority;
+    }
+
+    public String getAlias() {
+        return alias;
+    }
+
+    public void setAlias(String alias) {
+        this.alias = alias;
     }
 
     public MPSFunction<?> getMask() {
