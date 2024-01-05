@@ -8,10 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.github.yulichang.wrapper.JoinAbstractLambdaWrapper;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import org.nimang.mpjtool.annotation.*;
-import org.nimang.mpjtool.enums.LogicKey;
-import org.nimang.mpjtool.enums.OrderKey;
-import org.nimang.mpjtool.enums.PriorityKey;
-import org.nimang.mpjtool.enums.RuleKey;
+import org.nimang.mpjtool.enums.*;
 import org.nimang.mpjtool.fun.MPSFunction;
 import org.nimang.mpjtool.obj.MPCondition;
 import org.nimang.mpjtool.obj.MPOrder;
@@ -119,15 +116,26 @@ public class MPJUtil {
     public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withOrder) {
         List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
         List<MPOrder> resultList = new ArrayList<>();
+
+
+        Class<?> source;
+        String alias;
+        String field;
+        MPSFunction<?> sourceMask;
+        MPSFunction<?> resultMask;
+        MPSelect mpSelect;
+        MPOrderBy mpOrderBy;
+        MPFunc mpFunc;
+        MPEnums mpEnums;
         for (Field cField:cFields){
             // 忽略静态字段和被注解忽略的字段
             if (isStaticField(cField) || isFieldIgnored(cField)) {
                 continue;
             }
-            Class<?> source = mainClass;
-            String alias = "";
-            String field = cField.getName();
-            MPSelect mpSelect = cField.getAnnotation(MPSelect.class);
+            source = mainClass;
+            alias = StrUtil.EMPTY;
+            field = cField.getName();
+            mpSelect = cField.getAnnotation(MPSelect.class);
             if(mpSelect != null){
                 if(!Void.class.equals(mpSelect.targetClass())){
                     source = mpSelect.targetClass();
@@ -139,10 +147,11 @@ public class MPJUtil {
             } else if (NEED_ANNOTATION){
                 continue;
             }
-            MPSFunction<?> sourceMask = getMask(source, field, "SELECT", result.getName());
-            MPSFunction<?> resultMask = getMask(result, cField.getName(), "SELECT", result.getName());
+            sourceMask = getMask(source, field, "SELECT", result.getName());
+            resultMask = getMask(result, cField.getName(), "SELECT", result.getName());
+
             // 排序
-            MPOrderBy mpOrderBy = cField.getAnnotation(MPOrderBy.class);
+            mpOrderBy = cField.getAnnotation(MPOrderBy.class);
             if(mpOrderBy != null){
                 MPOrder mpOrder = new MPOrder();
                 mpOrder.setPriority(mpOrderBy.priority());
@@ -152,7 +161,7 @@ public class MPJUtil {
                 resultList.add(mpOrder);
             }
             // 枚举
-            MPEnums mpEnums = cField.getAnnotation(MPEnums.class);
+            mpEnums = cField.getAnnotation(MPEnums.class);
             if(mpEnums != null){
                 // 枚举转换
                 try {
@@ -163,7 +172,10 @@ public class MPJUtil {
                     throw new RuntimeException(result.getName() + " -> " + "SELECT：枚举转换错误[" + cField.getName()+ "]");
                 }
             }else {
-                if(StrUtil.isBlank(alias)){
+                mpFunc = cField.getAnnotation(MPFunc.class);
+                if(mpFunc != null){ // 构建函数
+                    buildFunc(mpFunc.func(), wrapper, sourceMask, resultMask);
+                }else if(StrUtil.isBlank(alias)){
                     wrapper.selectAs(sourceMask, resultMask);
                 }else {
                     wrapper.selectAs(alias, sourceMask, resultMask);
@@ -183,6 +195,41 @@ public class MPJUtil {
         }
         return wrapper;
     }
+
+    /**
+     * 根据给定的函数类型，为MPJLambdaWrapper对象选择相应的函数操作
+     * @param funcKey 函数类型
+     * @param wrapper MPJLambdaWrapper对象
+     * @param sourceMask 源掩码函数
+     * @param resultMask 结果掩码函数
+     * @param <T> 源数据类型
+     */
+    private static <T> void buildFunc(FuncKey funcKey, MPJLambdaWrapper<T> wrapper,  MPSFunction<?> sourceMask, MPSFunction<?> resultMask) {
+        switch (funcKey){
+            case AVG:
+                wrapper.selectAvg(sourceMask, resultMask);
+                break;
+            case LEN:
+                wrapper.selectLen(sourceMask, resultMask);
+                break;
+            case SUM:
+                wrapper.selectSum(sourceMask, resultMask);
+                break;
+            case COUNT:
+                wrapper.selectCount(sourceMask, resultMask);
+                break;
+            case MAX:
+                wrapper.selectMax(sourceMask, resultMask);
+                break;
+            case MIN:
+                wrapper.selectMin(sourceMask, resultMask);
+                break;
+            default:
+                break;
+        }
+    }
+
+
     /***********************************  SELECT END  ***********************************/
 
     /***********************************  JOIN START  ***********************************/
