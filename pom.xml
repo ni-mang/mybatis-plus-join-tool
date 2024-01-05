@@ -17,8 +17,9 @@
         <!-- mybatis-plus-core -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-core</artifactId>
-            <version>3.5.1</version>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.5.5</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- mybatis-plus-join -->
