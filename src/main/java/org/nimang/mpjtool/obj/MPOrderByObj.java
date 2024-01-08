@@ -4,7 +4,7 @@ package org.nimang.mpjtool.obj;
 import org.nimang.mpjtool.fun.MPSFunction;
 
 /**
- * 排序参数
+ * 排序数据对象
  * @author JustHuman
  */
 public class MPOrderByObj {

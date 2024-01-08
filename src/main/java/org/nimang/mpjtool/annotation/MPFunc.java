@@ -8,7 +8,7 @@ import java.lang.annotation.*;
 
 /**
  * 函数
- * <br>依赖于@MPSelect，指定函数操作当前字段</br>
+ * <br>依赖于@MPSelect，使用常用函数对当前字段进行处理</br>
  * @author JustHuman
  */
 @Documented
@@ -18,8 +18,8 @@ import java.lang.annotation.*;
 public @interface MPFunc {
 
     /**
-     * 函数
-     * <br>支持函数：LEN, SUM, COUNT, MAX, MIN, AVG</br>
+     * 内置函数
+     * <br>LEN, SUM, COUNT, MAX, MIN, AVG</br>
      * @return FuncKey
      */
     FuncKey func();

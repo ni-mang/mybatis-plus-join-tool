@@ -7,6 +7,7 @@ import org.nimang.mpjtool.annotation.MPOrderBy;
 import org.nimang.mpjtool.fun.MPSFunction;
 
 /**
+ * 获取数据对象
  * @author JustHuman
  */
 public class MPSelectObj {
