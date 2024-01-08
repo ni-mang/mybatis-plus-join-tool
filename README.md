@@ -14,9 +14,6 @@
     <a target="_blank" href="https://mybatisplusjoin.com">
 		<img src="https://img.shields.io/badge/MPJ-1.4.9-green.svg" />
 	</a>
-    <a target="_blank" href="https://hutool.cn">
-		<img src="https://img.shields.io/badge/Hutool-5.8.24-green.svg" />
-	</a>
     <a target="_blank" href='https://gitee.com/nimang/mpjtool/stargazers'>
 		<img src='https://gitee.com/nimang/mpjtool/badge/star.svg?theme=gvp' alt='star'/>
 	</a>
