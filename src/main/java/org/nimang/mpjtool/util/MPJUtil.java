@@ -11,7 +11,8 @@ import org.nimang.mpjtool.annotation.*;
 import org.nimang.mpjtool.enums.*;
 import org.nimang.mpjtool.fun.MPSFunction;
 import org.nimang.mpjtool.obj.MPCondition;
-import org.nimang.mpjtool.obj.MPOrder;
+import org.nimang.mpjtool.obj.MPOrderByObj;
+import org.nimang.mpjtool.obj.MPSelectObj;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -115,118 +116,106 @@ public class MPJUtil {
      */
     public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withOrder) {
         List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
-        List<MPOrder> resultList = new ArrayList<>();
+        List<MPOrderByObj> orderByList = new ArrayList<>();
 
-
-        Class<?> source;
-        String alias;
-        String field;
-        MPSFunction<?> sourceMask;
-        MPSFunction<?> resultMask;
-        MPSelect mpSelect;
+        MPSelectObj selectObj;
         MPOrderBy mpOrderBy;
-        MPFunc mpFunc;
-        MPEnums mpEnums;
         for (Field cField:cFields){
-            // 忽略静态字段和被注解忽略的字段
-            if (isStaticField(cField) || isFieldIgnored(cField)) {
+            selectObj = analyzeSelect(cField, mainClass, result, orderByList);
+            if(selectObj == null){
                 continue;
             }
-            source = mainClass;
-            alias = StrUtil.EMPTY;
-            field = cField.getName();
-            mpSelect = cField.getAnnotation(MPSelect.class);
-            if(mpSelect != null){
-                if(!Void.class.equals(mpSelect.targetClass())){
-                    source = mpSelect.targetClass();
-                }
-                if(StrUtil.isNotBlank(mpSelect.field())){
-                    field = mpSelect.field();
-                }
-                alias = mpSelect.alias();
-            } else if (NEED_ANNOTATION){
-                continue;
-            }
-            sourceMask = getMask(source, field, "SELECT", result.getName());
-            resultMask = getMask(result, cField.getName(), "SELECT", result.getName());
-
-            // 排序
-            mpOrderBy = cField.getAnnotation(MPOrderBy.class);
-            if(mpOrderBy != null){
-                MPOrder mpOrder = new MPOrder();
-                mpOrder.setPriority(mpOrderBy.priority());
-                mpOrder.setIsAsc(OrderKey.ASC.equals(mpOrderBy.order()));
-                mpOrder.setMask(sourceMask);
-                mpOrder.setAlias(alias);
-                resultList.add(mpOrder);
-            }
-            // 枚举
-            mpEnums = cField.getAnnotation(MPEnums.class);
-            if(mpEnums != null){
+            if(selectObj.getMpEnums() != null){
                 // 枚举转换
                 try {
-                    String target = StrUtil.isBlank(alias) ? "" : alias + ".`" + field + "`";
-                    StringBuilder caseInfo = getCaseInfo(target, mpEnums.enumClass(), mpEnums.val(), mpEnums.msg());
-                    wrapper.selectFunc(caseInfo::toString, sourceMask, resultMask);
+                    buildEnums(selectObj, wrapper);
                 } catch (Exception e) {
                     throw new RuntimeException(result.getName() + " -> " + "SELECT：枚举转换错误[" + cField.getName()+ "]");
                 }
+            }else if(selectObj.getMpFunc() != null){
+                // 构建函数
+                buildFunc(selectObj, wrapper);
             }else {
-                mpFunc = cField.getAnnotation(MPFunc.class);
-                if(mpFunc != null){ // 构建函数
-                    buildFunc(mpFunc.func(), wrapper, sourceMask, resultMask);
-                }else if(StrUtil.isBlank(alias)){
-                    wrapper.selectAs(sourceMask, resultMask);
+                // 常规字段
+                if(StrUtil.isBlank(selectObj.getAlias())){
+                    wrapper.selectAs(selectObj.getSourceMask(), selectObj.getResultMask());
                 }else {
-                    wrapper.selectAs(alias, sourceMask, resultMask);
+                    wrapper.selectAs(selectObj.getAlias(), selectObj.getSourceMask(), selectObj.getResultMask());
                 }
             }
         }
         // 排序处理
         if(withOrder) {
-            CollectionUtil.sort(resultList, Comparator.comparingInt(MPOrder::getPriority));
-            resultList.forEach(o -> {
-                if(StrUtil.isBlank(o.getAlias())){
-                    wrapper.orderBy(true, o.getIsAsc(), o.getMask());
-                }else {
-                    wrapper.orderBy(true, o.getIsAsc(), o.getAlias(), o.getMask());
-                }
-            });
+            buildOrderBy(orderByList, wrapper);
         }
         return wrapper;
     }
 
     /**
-     * 根据给定的函数类型，为MPJLambdaWrapper对象选择相应的函数操作
-     * @param funcKey 函数类型
-     * @param wrapper MPJLambdaWrapper对象
-     * @param sourceMask 源掩码函数
-     * @param resultMask 结果掩码函数
-     * @param <T> 源数据类型
+     * 分析select注解
      */
-    private static <T> void buildFunc(FuncKey funcKey, MPJLambdaWrapper<T> wrapper,  MPSFunction<?> sourceMask, MPSFunction<?> resultMask) {
-        switch (funcKey){
-            case AVG:
-                wrapper.selectAvg(sourceMask, resultMask);
-                break;
-            case LEN:
-                wrapper.selectLen(sourceMask, resultMask);
-                break;
-            case SUM:
-                wrapper.selectSum(sourceMask, resultMask);
-                break;
-            case COUNT:
-                wrapper.selectCount(sourceMask, resultMask);
-                break;
-            case MAX:
-                wrapper.selectMax(sourceMask, resultMask);
-                break;
-            case MIN:
-                wrapper.selectMin(sourceMask, resultMask);
-                break;
-            default:
-                break;
+    private static <T> MPSelectObj analyzeSelect(Field cField, Class<T> mainClass, Class<?> result, List<MPOrderByObj> orderByList) {
+        // 忽略静态字段和被注解忽略的字段
+        if (isStaticField(cField) || isFieldIgnored(cField)) {
+            return null;
         }
+        MPSelectObj selectObj = new MPSelectObj(mainClass, cField.getName());
+        MPSelect mpSelect = cField.getAnnotation(MPSelect.class);
+        if(mpSelect != null){
+            if(!Void.class.equals(mpSelect.targetClass())){
+                selectObj.setSource(mpSelect.targetClass());
+            }
+            if(StrUtil.isNotBlank(mpSelect.field())){
+                selectObj.setField(mpSelect.field());
+            }
+            selectObj.setAlias(mpSelect.alias());
+        } else if (NEED_ANNOTATION){
+            return null;
+        }
+        selectObj.setSourceMask(getMask(selectObj.getSource(), selectObj.getField(), "SELECT", result.getName()));
+        selectObj.setResultMask(getMask(result, cField.getName(), "SELECT", result.getName()));
+        selectObj.setMpEnums(cField.getAnnotation(MPEnums.class));
+        selectObj.setMpFunc(cField.getAnnotation(MPFunc.class));
+
+        MPOrderBy mpOrderBy = cField.getAnnotation(MPOrderBy.class);
+        if(mpOrderBy != null){
+            orderByList.add(new MPOrderByObj(mpOrderBy.priority(), selectObj.getAlias(), selectObj.getSourceMask(), OrderKey.ASC.equals(mpOrderBy.order())));
+        }
+
+        return selectObj;
+    }
+
+    /**
+     * 构建枚举
+     */
+    private static <T> void buildEnums(MPSelectObj selectObj, MPJLambdaWrapper<T> wrapper) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+        String target = getTargetStr(selectObj);
+        StringBuilder caseInfo = getCaseInfo(target, selectObj.getMpEnums().enumClass(), selectObj.getMpEnums().val(), selectObj.getMpEnums().msg());
+        wrapper.selectFunc(caseInfo::toString, selectObj.getSourceMask(), selectObj.getResultMask());
+    }
+
+    /**
+     * 根据给定的函数类型，为MPJLambdaWrapper对象选择相应的函数操作
+     */
+    private static <T> void buildFunc(MPSelectObj selectObj, MPJLambdaWrapper<T> wrapper) {
+        String target = getTargetStr(selectObj);
+        StringBuilder funcInfo = new StringBuilder()
+                .append(selectObj.getMpFunc().func()).append("(").append(target).append(")");
+        wrapper.selectFunc(funcInfo::toString, selectObj.getSourceMask(), selectObj.getResultMask());
+    }
+
+    /**
+     * 根据给定的排序规则列表和Lambda包装器构建排序指令
+     */
+    private static <T> void buildOrderBy(List<MPOrderByObj> resultList, MPJLambdaWrapper<T> wrapper) {
+        CollectionUtil.sort(resultList, Comparator.comparingInt(MPOrderByObj::getPriority));
+        resultList.forEach(o -> {
+            if(StrUtil.isBlank(o.getAlias())){
+                wrapper.orderBy(true, o.getIsAsc(), o.getMask());
+            }else {
+                wrapper.orderBy(true, o.getIsAsc(), o.getAlias(), o.getMask());
+            }
+        });
     }
 
 
@@ -258,11 +247,6 @@ public class MPJUtil {
 
     /**
      * join组装工序
-     * @param wrapper MPJLambdaWrapper<T>
-     * @param mainClass 主体类
-     * @param mpJoin 返回参数类
-     * @param <T>
-     * @param <X>
      */
     private static <T,X> void processJoin(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, MPJoin mpJoin, Class<?> result){
         MPOn[] mpOns = mpJoin.ons();
@@ -377,13 +361,6 @@ public class MPJUtil {
 
     /**
      * 生产条件对象
-     * @param mainClass 主体类
-     * @param mpWhere 查询注解
-     * @param cField 当前字段
-     * @param val 字段值
-     * @param betweenConditions Between条件
-     * @return MPCondition
-     * @param <T>
      */
     private static <T> MPCondition makeCondition(Class<T> mainClass, MPWhere mpWhere, Field cField, Object val, String queryName, Map<String, MPCondition> betweenConditions){
 
@@ -422,9 +399,6 @@ public class MPJUtil {
 
     /**
      * 逻辑工序
-     * @param wrapper MPJLambdaWrapper
-     * @param logicCondition 逻辑条件对象
-     * @param <T>
      */
     private static <T> void processWhereLogic(MPJLambdaWrapper<T> wrapper, MPCondition logicCondition) {
         List<MPCondition> conditions = logicCondition.getConditions();
@@ -449,8 +423,6 @@ public class MPJUtil {
     /***********************************  Condition START  ***********************************/
     /**
      * 条件拼接-具体值
-     * @param wrapper MPJLambdaWrapper<T>
-     * @param condition MPCondition
      */
     private static <T> void valCondition(JoinAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
         String alias = StrUtil.isBlank(condition.getAlias()) ? null : condition.getAlias();
@@ -506,8 +478,6 @@ public class MPJUtil {
 
     /**
      * 条件拼接-表字段信息
-     * @param wrapper MPJLambdaWrapper<T>
-     * @param condition MPCondition
      */
     private static <T> void funCondition(JoinAbstractLambdaWrapper<T,?> wrapper, MPCondition condition){
         String alias = StrUtil.isBlank(condition.getAlias()) ? null : condition.getAlias();
@@ -530,10 +500,16 @@ public class MPJUtil {
 
     /***********************************  Condition END  ***********************************/
 
+    /**
+     * Ignored注解判断
+     */
     private static boolean isFieldIgnored(Field field) {
         return field.isAnnotationPresent(MPIgnore.class);
     }
 
+    /**
+     * 静态变量判断
+     */
     private static boolean isStaticField(Field field) {
         return Modifier.isStatic(field.getModifiers());
     }
@@ -545,10 +521,6 @@ public class MPJUtil {
 
     /**
      * 将类、字段名转换为函数式（如：Student::getName）
-     * @param clazz 类
-     * @param filedName 字段名
-     * @return
-     * @param <T>
      */
     private static <T> MPSFunction<T> getMask(Class<T> clazz, String filedName){
         return new MPSFunction<>(filedName, clazz.getName());
@@ -570,23 +542,18 @@ public class MPJUtil {
     }
 
     /**
+     * 获取目标字符串
+     */
+    private static String getTargetStr(MPSelectObj selectObj) {
+        return StrUtil.isBlank(selectObj.getAlias()) ? "%s" : selectObj.getAlias() + ".`" + selectObj.getField() + "`";
+    }
+
+    /**
      * 迭代枚举组装case语句
-     * @param target
-     * @param enumClass
-     * @param valField
-     * @param msgField
-     * @return
-     * @throws InvocationTargetException
-     * @throws IllegalAccessException
-     * @throws NoSuchMethodException
      */
     private static StringBuilder getCaseInfo(String target, Class<?> enumClass, String valField, String msgField) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         StringBuilder caseInfo = new StringBuilder();
-        if(StrUtil.isBlank(target)){
-            caseInfo.append("CASE %s");
-        }else {
-            caseInfo.append("CASE ").append(target);
-        }
+        caseInfo.append("CASE ").append(target);
 
         Object[] enumConstants = enumClass.getEnumConstants();
         for (Object enumConstant : enumConstants) {

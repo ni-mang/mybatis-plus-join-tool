@@ -7,11 +7,21 @@ import org.nimang.mpjtool.fun.MPSFunction;
  * 排序参数
  * @author JustHuman
  */
-public class MPOrder {
+public class MPOrderByObj {
     private Integer priority;
     private String alias;
     private MPSFunction<?> mask;
     private Boolean isAsc;
+
+    public MPOrderByObj() {
+    }
+
+    public MPOrderByObj(Integer priority, String alias, MPSFunction<?> mask, Boolean isAsc) {
+        this.priority = priority;
+        this.alias = alias;
+        this.mask = mask;
+        this.isAsc = isAsc;
+    }
 
     public Integer getPriority() {
         return priority;
