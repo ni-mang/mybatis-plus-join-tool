@@ -11,6 +11,7 @@ import org.nimang.mpjtool.annotation.*;
 import org.nimang.mpjtool.enums.*;
 import org.nimang.mpjtool.fun.MPSFunction;
 import org.nimang.mpjtool.obj.MPCondition;
+import org.nimang.mpjtool.obj.MPGroupByObj;
 import org.nimang.mpjtool.obj.MPOrderByObj;
 import org.nimang.mpjtool.obj.MPSelectObj;
 
@@ -43,7 +44,7 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result) {
-        return build(wrapper, mainClass, query, result, true);
+        return build(wrapper, mainClass, query, result, true, true);
     }
 
     /**
@@ -55,7 +56,7 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result) {
-        return build(mainClass, query, result, true);
+        return build(mainClass, query, result, true, true);
     }
 
 
@@ -65,12 +66,13 @@ public class MPJUtil {
      * @param mainClass 主体类
      * @param query 搜索条件对象
      * @param result 返回参数类
+     * @param withGroup 是否进行分组
      * @param withOrder 是否进行排序
      * @return MPJLambdaWrapper
      * @param <T>
      */
-    public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result, Boolean withOrder) {
-        buildSelect(wrapper, mainClass, result, withOrder);
+    public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result, Boolean withGroup, Boolean withOrder) {
+        buildSelect(wrapper, mainClass, result, withGroup, withOrder);
         buildJoin(wrapper, mainClass, result);
         buildWhere(wrapper, mainClass, query);
         return wrapper;
@@ -81,13 +83,14 @@ public class MPJUtil {
      * @param mainClass 主体类
      * @param query 搜索条件对象
      * @param result 返回参数类
+     * @param withGroup 是否进行分组
      * @param withOrder 是否进行排序
      * @return MPJLambdaWrapper
      * @param <T>
      */
-    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result, Boolean withOrder) {
+    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Class<?> result, Boolean withGroup, Boolean withOrder) {
         MPJLambdaWrapper<T> wrapper = new MPJLambdaWrapper<>(mainClass);
-        return build(wrapper, mainClass, query, result, withOrder);
+        return build(wrapper, mainClass, query, result, withGroup, withOrder);
     }
 
 
@@ -102,7 +105,7 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result) {
-        return buildSelect(wrapper, mainClass, result, true);
+        return buildSelect(wrapper, mainClass, result, true, true);
     }
 
     /**
@@ -110,31 +113,33 @@ public class MPJUtil {
      * @param wrapper MPJLambdaWrapper
      * @param mainClass 主体类
      * @param result 返回参数类
+     * @param withGroup 是否进行分组
      * @param withOrder 是否进行排序
      * @return MPJLambdaWrapper
      * @param <T>
      */
-    public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withOrder) {
+    public static <T> MPJLambdaWrapper<T> buildSelect(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result, Boolean withGroup, Boolean withOrder) {
         List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
         List<MPOrderByObj> orderByList = new ArrayList<>();
+        List<MPGroupByObj> groupByList = new ArrayList<>();
 
         MPSelectObj selectObj;
-        MPOrderBy mpOrderBy;
         for (Field cField:cFields){
-            selectObj = analyzeSelect(cField, mainClass, result, orderByList);
+            // 解析select注解
+            selectObj = analyzeSelect(cField, mainClass, result, groupByList, orderByList);
             if(selectObj == null){
                 continue;
             }
             if(selectObj.getMpEnums() != null){
                 // 枚举转换
                 try {
-                    buildEnums(selectObj, wrapper);
+                    processEnums(selectObj, wrapper);
                 } catch (Exception e) {
                     throw new RuntimeException(result.getName() + " -> " + "SELECT：枚举转换错误[" + cField.getName()+ "]");
                 }
             }else if(selectObj.getMpFunc() != null){
                 // 构建函数
-                buildFunc(selectObj, wrapper);
+                processFunc(selectObj, wrapper);
             }else {
                 // 常规字段
                 if(StrUtil.isBlank(selectObj.getAlias())){
@@ -144,9 +149,13 @@ public class MPJUtil {
                 }
             }
         }
+        // 分组处理
+        if(withGroup) {
+            processGroupBy(groupByList, wrapper);
+        }
         // 排序处理
         if(withOrder) {
-            buildOrderBy(orderByList, wrapper);
+            processOrderBy(orderByList, wrapper);
         }
         return wrapper;
     }
@@ -154,7 +163,7 @@ public class MPJUtil {
     /**
      * 分析select注解
      */
-    private static <T> MPSelectObj analyzeSelect(Field cField, Class<T> mainClass, Class<?> result, List<MPOrderByObj> orderByList) {
+    private static <T> MPSelectObj analyzeSelect(Field cField, Class<T> mainClass, Class<?> result, List<MPGroupByObj> groupByList,  List<MPOrderByObj> orderByList) {
         // 忽略静态字段和被注解忽略的字段
         if (isStaticField(cField) || isFieldIgnored(cField)) {
             return null;
@@ -176,19 +185,25 @@ public class MPJUtil {
         selectObj.setResultMask(getMask(result, cField.getName(), "SELECT", result.getName()));
         selectObj.setMpEnums(cField.getAnnotation(MPEnums.class));
         selectObj.setMpFunc(cField.getAnnotation(MPFunc.class));
-
-        MPOrderBy mpOrderBy = cField.getAnnotation(MPOrderBy.class);
-        if(mpOrderBy != null){
-            orderByList.add(new MPOrderByObj(mpOrderBy.priority(), selectObj.getAlias(), selectObj.getSourceMask(), OrderKey.ASC.equals(mpOrderBy.order())));
+        if(groupByList != null){
+            MPGroupBy mpGroupBy = cField.getAnnotation(MPGroupBy.class);
+            if(mpGroupBy != null){
+                groupByList.add(new MPGroupByObj(mpGroupBy.priority(), selectObj.getAlias(), selectObj.getSourceMask()));
+            }
         }
-
+        if(orderByList != null){
+            MPOrderBy mpOrderBy = cField.getAnnotation(MPOrderBy.class);
+            if(mpOrderBy != null){
+                orderByList.add(new MPOrderByObj(mpOrderBy.priority(), selectObj.getAlias(), selectObj.getSourceMask(), OrderKey.ASC.equals(mpOrderBy.order())));
+            }
+        }
         return selectObj;
     }
 
     /**
-     * 构建枚举
+     * 枚举转换工序
      */
-    private static <T> void buildEnums(MPSelectObj selectObj, MPJLambdaWrapper<T> wrapper) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    private static <T> void processEnums(MPSelectObj selectObj, MPJLambdaWrapper<T> wrapper) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         String target = getTargetStr(selectObj);
         StringBuilder caseInfo = getCaseInfo(target, selectObj.getMpEnums().enumClass(), selectObj.getMpEnums().val(), selectObj.getMpEnums().msg());
         wrapper.selectFunc(caseInfo::toString, selectObj.getSourceMask(), selectObj.getResultMask());
@@ -197,7 +212,7 @@ public class MPJUtil {
     /**
      * 根据给定的函数类型，为MPJLambdaWrapper对象选择相应的函数操作
      */
-    private static <T> void buildFunc(MPSelectObj selectObj, MPJLambdaWrapper<T> wrapper) {
+    private static <T> void processFunc(MPSelectObj selectObj, MPJLambdaWrapper<T> wrapper) {
         String target = getTargetStr(selectObj);
         StringBuilder funcInfo = new StringBuilder()
                 .append(selectObj.getMpFunc().func()).append("(").append(target).append(")");
@@ -205,11 +220,66 @@ public class MPJUtil {
     }
 
     /**
+     * 组装分组参数，仅 groupBy
+     * @param wrapper MPJLambdaWrapper
+     * @param mainClass 主体类
+     * @param result 返回参数类
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> buildGroupBy(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result) {
+        List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
+        List<MPGroupByObj> groupByList = new ArrayList<>();
+        for (Field cField:cFields){
+            // 解析select注解
+            analyzeSelect(cField, mainClass, result, groupByList, null);
+        }
+        // 分组处理
+        processGroupBy(groupByList, wrapper);
+        return wrapper;
+    }
+
+    /**
+     * 根据给定的分组规则列表和Lambda包装器构建分组指令
+     */
+    private static <T> void processGroupBy(List<MPGroupByObj> groupByList, MPJLambdaWrapper<T> wrapper) {
+        CollectionUtil.sort(groupByList, Comparator.comparingInt(MPGroupByObj::getPriority));
+        groupByList.forEach(o -> {
+            if(StrUtil.isBlank(o.getAlias())){
+                wrapper.groupBy(true, o.getMask());
+            }else {
+                wrapper.groupBy(true, o.getAlias(), o.getMask());
+            }
+        });
+    }
+
+    /**
+     * 组装排序参数，仅 orderBy
+     * @param wrapper MPJLambdaWrapper
+     * @param mainClass 主体类
+     * @param result 返回参数类
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> buildOrderBy(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Class<?> result) {
+        List<Field> cFields = BaseUtil.getAllDeclaredFields(result);
+        List<MPOrderByObj> orderByList = new ArrayList<>();
+
+        for (Field cField:cFields){
+            // 解析select注解
+            analyzeSelect(cField, mainClass, result, null, orderByList);
+        }
+        // 排序处理
+        processOrderBy(orderByList, wrapper);
+        return wrapper;
+    }
+
+    /**
      * 根据给定的排序规则列表和Lambda包装器构建排序指令
      */
-    private static <T> void buildOrderBy(List<MPOrderByObj> resultList, MPJLambdaWrapper<T> wrapper) {
-        CollectionUtil.sort(resultList, Comparator.comparingInt(MPOrderByObj::getPriority));
-        resultList.forEach(o -> {
+    private static <T> void processOrderBy(List<MPOrderByObj> orderByList, MPJLambdaWrapper<T> wrapper) {
+        CollectionUtil.sort(orderByList, Comparator.comparingInt(MPOrderByObj::getPriority));
+        orderByList.forEach(o -> {
             if(StrUtil.isBlank(o.getAlias())){
                 wrapper.orderBy(true, o.getIsAsc(), o.getMask());
             }else {
