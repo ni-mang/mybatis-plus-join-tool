@@ -120,13 +120,15 @@ public class StaffWithPostVO implements Serializable {
     @MPSelect(targetClass = Post.class, field = "name")
     private String postName;
 
-    /** 职位ID */
+    /** 按职位ID统计 */
     @MPSelect(targetClass = Post.class, field = "id")
-    private Integer postId;
+    @MPFunc(func = FuncKey.COUNT)
+    private Integer postCount;
 
     /** 职位类型 */
     @MPSelect(targetClass = Post.class, field = "type")
     @MPOrderBy(order = OrderKey.ASC, priority = 2)
+    @MPGroupBy
     private Integer postType;
 
     /** 职位类型描述 */
@@ -171,7 +173,7 @@ SELECT
 	t.`no` AS NO,
 	t.`name` AS NAME,
 	t2.`name` AS postName,
-	t2.`id` AS postId,
+	COUNT( t2.`id` ) AS postCount,
 	t2.`type` AS postType,
 	CASE
 		t2.`type` 
@@ -200,9 +202,11 @@ WHERE
 		AND t.`join_time` >= '2023-11-01T00:00' 
 		AND t.`join_time` <= '2023-12-30T23:59:59' 
 	) 
+GROUP BY
+	t2.`type` 
 ORDER BY
 	t.`join_time` DESC,
-    t2.`type` ASC
+	t2.`type` ASC
 ```
 
 ### 注解文档
