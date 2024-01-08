@@ -49,7 +49,7 @@
 <dependency>
     <groupId>com.gitee.nimang</groupId>
     <artifactId>mpjtool</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
 </dependency>
 ```
 
@@ -390,6 +390,27 @@ private String orgName;
 </td></tr>
 </table>
 
+#### @MPGroupBy
+<table>
+<tr><td rowspan=3>@MPGroupBy</td><td>作用域：<a>字段</a></td><td colspan= 3>分组，设置以当前字段进行分组</td></tr>
+<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
+<tr><td><a>priority</a></td><td>int</td><td colspan= 2>分组条件优先级：<i>默认为0，数值越低，优先级越高</i></td></tr>
+<tr><td colspan= 5>
+
+```java
+
+/**
+ * 所在机构名称
+ * sql样例: GROUP BY org.`name`
+ */
+@MPSelect(targetClass = Org.class, alias = "org", field = "name")
+@MPGroupBy
+private String orgName;
+
+```
+</td></tr>
+</table>
+
 #### @MPOrderBy
 <table>
 <tr><td rowspan=4>@MPOrderBy</td><td>作用域：<a>字段</a></td><td colspan= 3>排序，设置当前字段排序规则</td></tr>
@@ -437,6 +458,26 @@ private Integer postType;
 @MPSelect(targetClass = Post.class, field = "type")
 @MPEnums(enumClass = PostTypeEnums.class, val = "code", msg = "msg")
 private String postTypeDesc;
+
+```
+</td></tr>
+</table>
+
+#### @MPFunc
+<table>
+<tr><td rowspan=3>@MPFunc</td><td>作用域：<a>字段</a></td><td colspan= 3>使用常用函数对当前字段进行处理</td></tr>
+<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
+<tr><td><a>func</a></td><td>FuncKey</td><td colspan= 2>内置函数：<i>LEN, SUM, COUNT, MAX, MIN, AVG</i></td></tr>
+<tr><td colspan= 5>
+
+```java
+
+/**
+ * 薪资
+ * sql样例: SUM( t.`wages` ) AS wages,
+ */
+@MPFunc(func = FuncKey.SUM)
+private BigDecimal wages;
 
 ```
 </td></tr>
