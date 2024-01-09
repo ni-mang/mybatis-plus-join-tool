@@ -39,12 +39,35 @@ public class MPJUtil {
      * @param wrapper MPJLambdaWrapper<T>
      * @param mainClass 主体类
      * @param query 搜索条件对象
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query) {
+        return build(wrapper, mainClass, query, mainClass);
+    }
+
+    /**
+     * 组装完整Wrapper，含 select、join、where、orderBy
+     * @param wrapper MPJLambdaWrapper<T>
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
      * @param result 返回参数类
      * @return MPJLambdaWrapper
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result) {
         return build(wrapper, mainClass, query, result, true, true);
+    }
+
+    /**
+     * 组装完整Wrapper，含 select、join、where、orderBy
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query) {
+        return build(mainClass, query, mainClass);
     }
 
     /**
@@ -59,6 +82,19 @@ public class MPJUtil {
         return build(mainClass, query, result, true, true);
     }
 
+    /**
+     * 组装完整Wrapper，含 select、join、where，自行选择是否组装orderBy排序
+     * @param wrapper MPJLambdaWrapper<T>
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
+     * @param withGroup 是否进行分组
+     * @param withOrder 是否进行排序
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Boolean withGroup, Boolean withOrder) {
+        return build(wrapper, mainClass, query, mainClass, withGroup, withOrder);
+    }
 
     /**
      * 组装完整Wrapper，含 select、join、where，自行选择是否组装orderBy排序
@@ -77,6 +113,19 @@ public class MPJUtil {
         buildSelect(wrapper, mainClass, result, withGroup, withOrder);
         buildWhere(wrapper, mainClass, query);
         return wrapper;
+    }
+
+    /**
+     * 组装完整Wrapper，含 select、join、where，自行选择是否组装orderBy排序
+     * @param mainClass 主体类
+     * @param query 搜索条件对象
+     * @param withGroup 是否进行分组
+     * @param withOrder 是否进行排序
+     * @return MPJLambdaWrapper
+     * @param <T>
+     */
+    public static <T> MPJLambdaWrapper<T> build(Class<T> mainClass, Object query, Boolean withGroup, Boolean withOrder) {
+        return build(mainClass, query, mainClass, withGroup, withOrder);
     }
 
     /**
