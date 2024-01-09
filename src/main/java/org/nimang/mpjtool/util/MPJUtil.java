@@ -72,8 +72,9 @@ public class MPJUtil {
      * @param <T>
      */
     public static <T> MPJLambdaWrapper<T> build(MPJLambdaWrapper<T> wrapper, Class<T> mainClass, Object query, Class<?> result, Boolean withGroup, Boolean withOrder) {
-        buildSelect(wrapper, mainClass, result, withGroup, withOrder);
+        // 此处必须优先调 buildJoin，否则可能导致表别名映射错误
         buildJoin(wrapper, mainClass, result);
+        buildSelect(wrapper, mainClass, result, withGroup, withOrder);
         buildWhere(wrapper, mainClass, query);
         return wrapper;
     }
@@ -293,7 +294,7 @@ public class MPJUtil {
 
     /***********************************  JOIN START  ***********************************/
     /**
-     * 组装Join关系，仅 join
+     * 组装Join关系，仅 join，注意：分段组装时，必须优先调用此方法
      * @param wrapper MPJLambdaWrapper<T>
      * @param mainClass 主体类
      * @param result 返回参数类

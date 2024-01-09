@@ -19,6 +19,17 @@
 	</a>
 </p>
 
+<p align="center">
+    <a target="_blank" href="https://gitee.com/nimang/pupa">
+		<img src="https://img.shields.io/badge/PUPA代码生成器-blue.svg" />
+	</a>
+</p>
+<p align="center">
+    <a target="_blank" href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=8I4gMT8jz-0TFPswB52fL3An6LnBRATk&authKey=jpC5h9eZsXtn3VP1RnLWKS6R6NyFARLn%2BpRXX4sVU6lgzshyDPPSNFTA83TUA90s&noverify=0&group_code=469069380">
+		<img src="https://img.shields.io/badge/MPJTool QQ交流群-orange.svg" />
+	</a>
+</p>
+
 ### 介绍
 　　基于 [mybatis-plus-join](https://mybatisplusjoin.com/)，通过对查询接口中的 Query 查询参数类（搜索条件）及 Result 结果返回类（结果数据）添加相应注解，实现自动组装 MPJLambdaWrapper 对象
 
@@ -46,12 +57,17 @@
 <dependency>
     <groupId>com.gitee.nimang</groupId>
     <artifactId>mpjtool</artifactId>
-    <version>1.2.3</version>
+    <version>1.2.4</version>
 </dependency>
 ```
+### 使用
+1. 在 **Query** 类、**Result** 类中添加相应[**注解**](README.md#注解说明)
+2. 调用 **MPJUtil** 的 `build` 方法全项组装 `MPJLambdaWrapper`，即可用于查询
+3. 或者分别调用 **MPJUtil** 的 `buildJoin`、`buildSelect`、`buildWhere`、`buildGroupBy`、`buildOrderBy` 等方法分段组装 `MPJLambdaWrapper`，可在其中自行添加额外条件用于查询
+4. 注意：分段组装时，务必优先调用 `buildJoin` 方法，否则将可能导致表别名映射错误
 
 ### 简单样例
-　　以员工表 demo_staff 为主表，先左连接中间表 demo_staff_post，再右连接职位表 demo_post，使用 StaffQuery 携带的参数进行查询，并将结果数据封装为 StaffWithPostVO 返回；
+　　以 **员工表 demo_staff** 为主表，先左连接 **员工-职位中间表 demo_staff_post**，再右连接 **职位表 demo_post**，使用 **StaffQuery** 传入参数进行查询，并将结果数据封装为 **StaffWithPostVO** 返回；
 
 Query 查询参数类
 ```java
@@ -209,72 +225,10 @@ ORDER BY
 	t2.`type` ASC
 ```
 
-### 注解文档
+### 注解说明
 -  主类：用于本次搜索的wrapper初始化时的泛型类，如 `MPJLambdaWrapper<Staff>` 的主类为 `Staff`
--  调用 MPJUtil 工具类 `build`、`buildSelect`、`buildJoin`、`buildWhere` 等方法组装 `MPJLambdaWrapper`，即可用于查询
 
-#### @MPWhere
-<table>
-<tr><td rowspan=7>@MPWhere</td><td>作用域：<a>字段</a></td><td colspan= 3>标注 Query 查询参数类中用于搜索条件的字段，如该字段在主类且字段名相同，可省略</td></tr>
-<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
-<tr><td><a>targetClass</a></td><td>Class</td><td colspan= 2>目标类class：<i>搜索字段所在的类，不设置则默认为主类</i></td></tr>
-<tr><td><a>alias</a></td><td>String</td><td colspan= 2>别名：<i>不设置则按默认别名，主表为“t”，连接表分别按“t1,t2,t3...”顺序命名</i></td></tr>
-<tr><td><a>field</a></td><td>String</td><td colspan= 2>字段名：<i>搜索字段名，不设置则同当前字段名</i></td></tr>
-<tr><td><a>rule</a></td><td>RuleKey</td><td colspan= 2>搜索规则：<i>默认为 RuleKey.EQ</i></td></tr>
-<tr><td><a>priority</a></td><td>PriorityKey</td><td colspan= 2>优先级：<i>当 rule 为 BETWEEN 或 NOT_BETWEEN 时，需指定优先级，默认为 PriorityKey.BEFORE</i></td></tr>
-<tr><td colspan= 5>
-
-```java
-/**
- * 电话
- * 未添加注解，默认以当前字段名在主类中使用eq规则进行搜索
- * sql样例: AND t.`phone` = '10086' 
- */
-private String phone;
-
-/**
- * 姓名
- * 如当前字段不为空，则对主表中的name使用like规则进行搜索
- * sql样例: AND t.`name` LIKE '%张%' 
- */
-@MPWhere(rule = RuleKey.LIKE)
-private String name;
-
-/**
- * 机构名称
- * 如当前字段不为空，则对Org表中的name使用like规则进行搜索
- * sql样例: AND org.`name` LIKE '技术%' 
- */
-@MPWhere(targetClass = Org.class, field = "name",rule = RuleKey.LIKE_RIGHT)
-private String orgName;
-```
-</td></tr>
-</table>
-
-#### @MPWheres
-<table>
-<tr><td rowspan=4>@MPWheres</td><td>作用域：<a>字段</a></td><td colspan= 3>当需要使用同一个参数对不同字段进行搜索时（如使用 loginNmae 搜索匹配 userName 或 mobileNo），用于配置多个条件</td></tr>
-<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
-<tr><td><a>wheres</a></td><td>MPWhere[ ]</td><td colspan= 2>查询规则组：<i>配置的 @MPWhere 组合</i></td></tr>
-<tr><td><a>logic</a></td><td>LogicKey</td><td colspan= 2>逻辑规则：<i>多个条件之间的逻辑关系，默认为LogicKey.OR</i></td></tr>
-<tr><td colspan= 5>
-
-```java
-/**
- * 登录名，no或mobile
- * 如当前字段不为空，则对主表中的no或mobile使用like规则进行搜索
- * sql样例: AND ((t.`no` LIKE '%16%' ) OR ( t.`mobile` LIKE '%16%' ))  
- */
-@MPWheres(wheres = {
-        @MPWhere(field = "no", rule = RuleKey.LIKE),
-        @MPWhere(field = "mobile", rule = RuleKey.LIKE)
-}, logic = LogicKey.OR)
-private String loginName;
-```
-</td></tr>
-</table>
-
-#### @MPJoin
+#### @MPJoin - Result
 <table>
 <tr><td rowspan=6>@MPJoin</td><td>作用域：<a>类</a></td><td colspan= 3>在 Result 结果返回类中标注连接规则</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -318,7 +272,7 @@ public class StaffWithLeaderVO implements Serializable {
 </td></tr>
 </table>
 
-#### @MPOn
+#### @MPOn - Result
 <table>
 <tr><td rowspan=8>@MPOn</td><td>作用域：<a>类</a></td><td colspan= 3>ON规则，依赖于@MPJoin，可指定左表字段与右表字段的连接关系，也可直接指定左表字段与具体数值的关系</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -362,7 +316,7 @@ public class StaffWithLeaderVO implements Serializable {
 </td></tr>
 </table>
 
-#### @MPSelect
+#### @MPSelect - Result
 <table>
 <tr><td rowspan=7>@MPSelect</td><td>作用域：<a>字段</a></td><td colspan= 3>标注 Result 结果返回类中用于 select 的字段，如该字段在主类且字段名相同，可省略</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -391,7 +345,7 @@ private String orgName;
 </td></tr>
 </table>
 
-#### @MPGroupBy
+#### @MPGroupBy - Result
 <table>
 <tr><td rowspan=3>@MPGroupBy</td><td>作用域：<a>字段</a></td><td colspan= 3>分组，设置以当前字段进行分组</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -412,7 +366,7 @@ private String orgName;
 </td></tr>
 </table>
 
-#### @MPOrderBy
+#### @MPOrderBy - Result
 <table>
 <tr><td rowspan=4>@MPOrderBy</td><td>作用域：<a>字段</a></td><td colspan= 3>排序，设置当前字段排序规则</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -433,7 +387,7 @@ private Integer postType;
 </td></tr>
 </table>
 
-#### @MPEnums
+#### @MPEnums - Result
 <table>
 <tr><td rowspan=5>@MPEnums</td><td>作用域：<a>字段</a></td><td colspan= 3>枚举值转换，设置当前字段与指定枚举类的数据转换</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -464,7 +418,7 @@ private String postTypeDesc;
 </td></tr>
 </table>
 
-#### @MPFunc
+#### @MPFunc - Result
 <table>
 <tr><td rowspan=3>@MPFunc</td><td>作用域：<a>字段</a></td><td colspan= 3>使用常用函数对当前字段进行处理</td></tr>
 <tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
@@ -484,7 +438,68 @@ private BigDecimal wages;
 </td></tr>
 </table>
 
-#### @MPIgnore
+#### @MPWhere - Query
+<table>
+<tr><td rowspan=7>@MPWhere</td><td>作用域：<a>字段</a></td><td colspan= 3>标注 Query 查询参数类中用于搜索条件的字段，如该字段在主类且字段名相同，可省略</td></tr>
+<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
+<tr><td><a>targetClass</a></td><td>Class</td><td colspan= 2>目标类class：<i>搜索字段所在的类，不设置则默认为主类</i></td></tr>
+<tr><td><a>alias</a></td><td>String</td><td colspan= 2>别名：<i>不设置则按默认别名，主表为“t”，连接表分别按“t1,t2,t3...”顺序命名</i></td></tr>
+<tr><td><a>field</a></td><td>String</td><td colspan= 2>字段名：<i>搜索字段名，不设置则同当前字段名</i></td></tr>
+<tr><td><a>rule</a></td><td>RuleKey</td><td colspan= 2>搜索规则：<i>默认为 RuleKey.EQ</i></td></tr>
+<tr><td><a>priority</a></td><td>PriorityKey</td><td colspan= 2>优先级：<i>当 rule 为 BETWEEN 或 NOT_BETWEEN 时，需指定优先级，默认为 PriorityKey.BEFORE</i></td></tr>
+<tr><td colspan= 5>
+
+```java
+/**
+ * 电话
+ * 未添加注解，默认以当前字段名在主类中使用eq规则进行搜索
+ * sql样例: AND t.`phone` = '10086' 
+ */
+private String phone;
+
+/**
+ * 姓名
+ * 如当前字段不为空，则对主表中的name使用like规则进行搜索
+ * sql样例: AND t.`name` LIKE '%张%' 
+ */
+@MPWhere(rule = RuleKey.LIKE)
+private String name;
+
+/**
+ * 机构名称
+ * 如当前字段不为空，则对Org表中的name使用like规则进行搜索
+ * sql样例: AND org.`name` LIKE '技术%' 
+ */
+@MPWhere(targetClass = Org.class, field = "name",rule = RuleKey.LIKE_RIGHT)
+private String orgName;
+```
+</td></tr>
+</table>
+
+#### @MPWheres - Query
+<table>
+<tr><td rowspan=4>@MPWheres</td><td>作用域：<a>字段</a></td><td colspan= 3>当需要使用同一个参数对不同字段进行搜索时（如使用 loginNmae 搜索匹配 userName 或 mobileNo），用于配置多个条件</td></tr>
+<tr><td align="center"><b>属性</b></td><td align="center"><b>类型</b></td><td colspan= 2 align="center"><b>说明</b></td></tr>
+<tr><td><a>wheres</a></td><td>MPWhere[ ]</td><td colspan= 2>查询规则组：<i>配置的 @MPWhere 组合</i></td></tr>
+<tr><td><a>logic</a></td><td>LogicKey</td><td colspan= 2>逻辑规则：<i>多个条件之间的逻辑关系，默认为LogicKey.OR</i></td></tr>
+<tr><td colspan= 5>
+
+```java
+/**
+ * 登录名，no或mobile
+ * 如当前字段不为空，则对主表中的no或mobile使用like规则进行搜索
+ * sql样例: AND ((t.`no` LIKE '%16%' ) OR ( t.`mobile` LIKE '%16%' ))  
+ */
+@MPWheres(wheres = {
+        @MPWhere(field = "no", rule = RuleKey.LIKE),
+        @MPWhere(field = "mobile", rule = RuleKey.LIKE)
+}, logic = LogicKey.OR)
+private String loginName;
+```
+</td></tr>
+</table>
+
+#### @MPIgnore - Result | Query
 <table>
 <tr><td >@MPIgnore</td><td>作用域：<a>字段</a></td><td colspan= 3>忽略标注，被标注的非静态字段将不参与sql的构造，如类中含有的属性不存在于数据库表，务必使用 @MPIgnore 进行标注，否则执行生成的sql时将导致异常</td></tr>
 <tr><td colspan= 5>
@@ -506,11 +521,4 @@ private Integer pageSize;
 </td></tr>
 </table>
 
-### 须知
-　　本工具仅支持常用的 where 语句（如：eq、like、ge...）及 join、orderBy，不支持 full join、union、group、func 等操作，如需执行此类复杂查询，可使用分段组装后，使用 mybatis-plus-join 拼接相应语句
 
-### 联系邮箱
-　　362682205@qq.com
-
-### 推荐项目
-- [PUPA代码生成器](https://gitee.com/nimang/pupa)
